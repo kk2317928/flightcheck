@@ -14,6 +14,9 @@ P0 scope is frozen in [`docs/P0_v1.2.md`](docs/P0_v1.2.md). Implementation statu
 
 ```bash
 cp .env.example .env
+set -a
+source .env
+set +a
 pnpm install --frozen-lockfile
 pnpm dev
 ```
@@ -23,7 +26,7 @@ The Web app runs at `http://localhost:3000`. Its health endpoint is `GET /api/he
 The Worker foundation can be built and run independently:
 
 ```bash
-pnpm --filter @flightcheck/worker build
+pnpm turbo run build --filter=@flightcheck/worker
 pnpm --filter @flightcheck/worker start
 ```
 

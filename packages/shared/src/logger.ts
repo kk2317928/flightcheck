@@ -18,8 +18,8 @@ const SENSITIVE_KEY = /(authorization|cookie|password|secret|token)/i;
 const REDACTED = '[REDACTED]';
 
 function redactValue(value: unknown, seen: WeakSet<object>): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => redactValue(item, seen));
+  if (typeof value === 'function') {
+    return '[Function]';
   }
 
   if (value === null || typeof value !== 'object') {
@@ -30,6 +30,10 @@ function redactValue(value: unknown, seen: WeakSet<object>): unknown {
     return '[Circular]';
   }
   seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.map((item) => redactValue(item, seen));
+  }
 
   return Object.fromEntries(
     Object.entries(value).map(([key, nestedValue]) => [
@@ -54,11 +58,11 @@ export function createLogger({
   ): void {
     sink(
       JSON.stringify({
+        ...redactSensitiveFields(context),
         timestamp: new Date().toISOString(),
         level,
         service,
         event,
-        ...redactSensitiveFields(context),
       }),
     );
   }

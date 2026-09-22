@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createLogger } from './logger.js';
+import { createLogger, redactSensitiveFields } from './logger.js';
 
 describe('createLogger', () => {
   it('writes structured records with correlation context', () => {
@@ -52,5 +52,50 @@ describe('createLogger', () => {
         socialAccessToken: '[REDACTED]',
       },
     });
+  });
+
+  it('does not invoke custom serialization that can reveal secrets', () => {
+    const records: string[] = [];
+    const logger = createLogger({
+      service: 'web',
+      sink: (line) => records.push(line),
+    });
+
+    logger.info('unsafe.payload', {
+      payload: {
+        toJSON: () => ({
+          password: 'plain-password',
+          accessToken: 'raw-token',
+        }),
+      },
+    });
+
+    expect(records[0]).not.toContain('plain-password');
+    expect(records[0]).not.toContain('raw-token');
+  });
+
+  it('keeps canonical metadata when context uses reserved names', () => {
+    const records: string[] = [];
+    const logger = createLogger({
+      service: 'worker',
+      sink: (line) => records.push(line),
+    });
+
+    logger.info('worker.ready', { level: 'error', service: 'spoofed' });
+
+    expect(JSON.parse(records[0] ?? '{}')).toMatchObject({
+      event: 'worker.ready',
+      level: 'info',
+      service: 'worker',
+    });
+  });
+
+  it('handles self-referential arrays', () => {
+    const circular: unknown[] = [];
+    circular.push(circular);
+
+    expect(() =>
+      JSON.stringify(redactSensitiveFields({ circular })),
+    ).not.toThrow();
   });
 });
