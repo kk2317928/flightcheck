@@ -132,4 +132,3 @@ Review the CP-02 gate and create the checkpoint tag if approved, then begin
 ```text
 feat(worker): add resilient flight sync job
 ```
-
