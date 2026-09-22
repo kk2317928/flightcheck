@@ -1,12 +1,12 @@
 # FlightCheck Current State
 
 > Updated: 2026-09-22  
-> Branch: `feat/t-004-admin-auth`  
+> Branch: `feat/t-005-flight-source-contract`  
 > Baseline commit inspected: `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`
 
 ## Project Phase
 
-CP-01 implementation is complete. T-001 through T-004 are verified; the checkpoint tag remains to be created.
+CP-02 implementation is active. T-001 through T-005 are verified.
 
 The repository began with documentation only. It now contains:
 
@@ -19,6 +19,7 @@ The repository began with documentation only. It now contains:
 - `apps/worker` — Node.js Worker foundation and health contract.
 - `packages/shared` — validated environment, Macau time, correlation ID and structured logging utilities.
 - `packages/db` — Prisma 7 schema, generated-client factory, initial PostgreSQL migration and idempotent seed.
+- `packages/flight-source` — parser-independent airport source contracts, normalized flight types and runtime validation.
 - Admin authentication — Argon2id passwords, database-backed sessions, hardened cookies, rate limiting, route protection and audit logs.
 - Root pnpm/Turborepo, TypeScript, Tailwind, ESLint, Prettier, Vitest and Playwright tooling.
 - `.github/workflows/ci.yml` — install and full verification workflow.
@@ -47,23 +48,26 @@ The repository began with documentation only. It now contains:
 | T-002 config and observability      | Complete                       | Zod env validation, Macau time helpers, correlation IDs and redacted JSON logging |
 | T-003 PostgreSQL／Prisma schema     | Complete                       | 15 P0 models, initial migration, constraints, client factory and idempotent seed  |
 | T-004 Admin authentication          | Complete                       | Argon2id, hashed sessions, hardened cookies, rate limit, proxy guard and audit    |
+| T-005 Flight source contracts       | Complete                       | Adapter, raw/normalized schemas, warnings and discriminated fetch results         |
 
 ## Active Checkpoint
 
-`CP-01 — Project Foundation`
+`CP-02 — Flight Acquisition & Status`
 
 ## Active Task
 
-`T-004 — Admin 身分驗證、Session 與 Audit` is complete. All CP-01 functional gates pass; only the checkpoint tag remains.
+`T-005 — Flight Source Contract 與 NormalizedFlight` is complete.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
 The bootstrap command `pnpm --filter @flightcheck/web admin:create` requires `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `DATABASE_URL`, enforces a 12-character minimum, and refuses to overwrite an existing administrator.
 
+T-005 introduced `@flightcheck/flight-source` as the only contract boundary for airport data. `RawAirportFlight` preserves source text for the future parser; `NormalizedFlight` exposes UTC instants plus the Macau-local service date. `FlightSourceFetchResult` is a runtime-validated discriminated union for COMPLETE, PARTIAL and FAILED observations. Failed observations cannot contain flights, preventing timeout, HTTP failure or malformed source data from being treated as an empty flight board. Flight numbers remain strings and accept suffixes such as `NX862D`. No HTML parser dependency is present in the contract package.
+
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- `pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 53 Vitest tests and production builds for DB, Shared, Web and Worker.
+- `pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 61 Vitest tests and production builds for DB, Flight Source, Shared, Web and Worker.
 - DB integration tests apply the initial migration to an empty embedded PostgreSQL instance, enforce event/post uniqueness, and run the Prisma seed twice without duplicates.
 - Next.js production build exposes the public routes, protected `/admin`, login UI and three Admin auth endpoints; its database-backed proxy compiles successfully. Worker compiles to `dist/`.
 - The auth integration test uses embedded PostgreSQL to prove login, audit creation, session authentication, logout revocation and prevention of token reuse. Unit/route tests cover Argon2id, cookie flags, throttling and unauthorized page/API handling.
@@ -78,8 +82,8 @@ The bootstrap command `pnpm --filter @flightcheck/web admin:create` requires `AD
 
 ## Next Exact Action
 
-Create the `cp-01-foundation` tag after reviewing this Task commit, then start T-005 on a new branch from the completed T-004 commit.
+Start T-006 from the completed T-005 commit. Implement the Macau Airport Departures/Arrivals HTTP client, bounded timeout/retries and de-identified HTML fixtures without adding Playwright.
 
 ```text
-feat(source): define normalized flight source contract
+feat(source): add macau airport client and fixtures
 ```

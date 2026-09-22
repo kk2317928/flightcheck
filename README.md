@@ -77,6 +77,7 @@ apps/web/       Next.js App Router public and Admin application
 apps/worker/    persistent Node.js worker foundation
 packages/shared validated configuration, Macau time and observability utilities
 packages/db     PostgreSQL schema, Prisma client, migrations and seed
+packages/flight-source external flight-source contracts and normalized data boundary
 tests/e2e/      browser-level smoke and acceptance tests
 docs/           frozen specification, implementation plan and runbooks
 ```
