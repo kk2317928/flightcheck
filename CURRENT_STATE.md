@@ -56,7 +56,7 @@ Database schema and migrations do not exist yet; they begin in T-003.
 
 `T-004 — Admin 身分驗證、Session 與 Audit` is next.
 
-T-003 added all 15 P0 models and the required enums, relations, indexes and unique constraints. Flight identity is `(flightId, serviceDate, direction, scheduledAt)`; snapshots are unique by `(flightInstanceId, payloadHash)`; social events use a unique idempotency key; social posts are unique by `(socialEventId, platform)`. Prisma 7 uses the PostgreSQL driver adapter, and seed data contains no admin credentials.
+T-003 added all 15 P0 models and the required enums, relations, indexes and unique constraints. Flight identity is `(flightId, serviceDate, direction, scheduledAt)`; snapshots are unique by `(flightInstanceId, payloadHash)`; social events use a unique idempotency key; social posts are unique by `(socialEventId, platform)`. Prisma 7 uses the PostgreSQL driver adapter. Seed data contains no admin credentials, is idempotent and preserves later Admin customizations.
 
 ## Verification Baseline
 

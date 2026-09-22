@@ -12,10 +12,7 @@ export async function seedDatabase(prisma: PrismaClient): Promise<void> {
         },
       },
       create: template,
-      update: {
-        content: template.content,
-        variables: [...template.variables],
-      },
+      update: {},
     });
   }
 
@@ -23,10 +20,7 @@ export async function seedDatabase(prisma: PrismaClient): Promise<void> {
     await prisma.setting.upsert({
       where: { key: setting.key },
       create: setting,
-      update: {
-        value: setting.value,
-        description: setting.description,
-      },
+      update: {},
     });
   }
 }

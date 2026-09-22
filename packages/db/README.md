@@ -27,4 +27,4 @@ The following command is destructive and must never be used against production:
 pnpm --filter @flightcheck/db db:migrate:reset
 ```
 
-It drops the configured database schema, reapplies every migration and runs the seed. Confirm that `DATABASE_URL` points to a disposable development database before running it.
+The package script drops the configured database schema, reapplies every migration, then explicitly runs `prisma db seed` because Prisma 7 does not seed automatically after reset. Confirm that `DATABASE_URL` points to a disposable development database before running it.

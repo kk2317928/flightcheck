@@ -13,11 +13,11 @@
     "build": "prisma generate && tsc -p tsconfig.build.json",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:migrate:reset": "prisma migrate reset --force",
-    "db:seed": "prisma db seed",
-    "lint": "eslint .",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "db:migrate:reset": "prisma generate && prisma migrate reset --force && prisma db seed",
+    "db:seed": "prisma generate && prisma db seed",
+    "lint": "prisma generate && eslint .",
+    "test": "prisma generate && vitest run",
+    "typecheck": "prisma generate && tsc --noEmit"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

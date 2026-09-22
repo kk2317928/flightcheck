@@ -36,10 +36,36 @@ describe('database seed', () => {
 
     try {
       await seedDatabase(prisma);
+      await prisma.socialTemplate.update({
+        where: {
+          type_name_version: { type: 'CANCELLED', name: 'default', version: 1 },
+        },
+        data: { content: 'Admin customized content' },
+      });
+      await prisma.setting.update({
+        where: { key: 'flight.delayThresholdMinutes' },
+        data: { value: 20 },
+      });
       await seedDatabase(prisma);
 
       await expect(prisma.socialTemplate.count()).resolves.toBe(2);
       await expect(prisma.setting.count()).resolves.toBe(4);
+      await expect(
+        prisma.socialTemplate.findUniqueOrThrow({
+          where: {
+            type_name_version: {
+              type: 'CANCELLED',
+              name: 'default',
+              version: 1,
+            },
+          },
+        }),
+      ).resolves.toMatchObject({ content: 'Admin customized content' });
+      await expect(
+        prisma.setting.findUniqueOrThrow({
+          where: { key: 'flight.delayThresholdMinutes' },
+        }),
+      ).resolves.toMatchObject({ value: 20 });
     } finally {
       await prisma.$disconnect();
     }
