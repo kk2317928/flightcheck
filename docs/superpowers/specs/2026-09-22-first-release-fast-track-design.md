@@ -1,7 +1,8 @@
 # FlightCheck First Release Fast Track Design
 
 > Date: 2026-09-22  
-> Status: Proposed  
+> Status: Approved  
+> Approved: 2026-09-22  
 > Product authority: `docs/P0_v1.2.md`
 
 ## 1. Purpose

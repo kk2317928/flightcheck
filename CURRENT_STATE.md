@@ -7,7 +7,10 @@
 ## Project Phase
 
 CP-02 implementation is complete through T-010. The automated CP-02 gate is
-green; the checkpoint tag remains intentionally uncreated pending gate review.
+green and checkpointed by `cp-02-flight-engine`. The approved First Release
+Fast Track is active at FR-01, beginning with T-011. It targets a production-safe
+public release before the deferred SNS and complete Admin scope; the original
+T-001–T-032 P0 backlog remains authoritative.
 
 The repository began with documentation only. It now contains:
 
@@ -59,11 +62,12 @@ The repository began with documentation only. It now contains:
 
 ## Active Checkpoint
 
-`CP-02 — Flight Acquisition & Status`
+`FR-01 — Truthful statistics`
 
 ## Active Task
 
-`T-010 — Flight Sync Use Case 與 Worker` is verified. One reusable Worker
+`T-011 — Statistics Engine` is next. `T-010 — Flight Sync Use Case 與 Worker`
+is verified. One reusable Worker
 service performs separate concurrent departure/arrival calls under the global
 `flight-sync` lease. Each direction owns its ScrapeRun and commits independently;
 FAILED source results never persist observations, while usable PARTIAL results,
@@ -109,7 +113,8 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
   runs; partial direction commits independently; missing rows have no status
   meaning; stale CAS reloads and re-evaluates once; CLI and timer share one use
   case.
-- Follow-up: review CP-02 gate/tag, then start T-011 on a new branch.
+- Follow-up: implement T-011 through T-013 for FR-01, then build the public
+  product in FR-02.
 - DB integration tests apply every migration in order to an empty embedded PostgreSQL instance, enforce event/post and snapshot uniqueness, verify conflict-safe SQL/status CAS behavior, and run the Prisma seed twice without duplicates.
 - Next.js production build exposes the public routes, protected `/admin`, login UI and three Admin auth endpoints; its database-backed proxy compiles successfully. Worker compiles to `dist/`.
 - The auth integration test uses embedded PostgreSQL to prove login, audit creation, session authentication, logout revocation and prevention of token reuse. Unit/route tests cover Argon2id, cookie flags, throttling and unauthorized page/API handling.
@@ -126,8 +131,8 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Review the CP-02 gate and create the checkpoint tag if approved, then begin
-`T-011 — Statistics Engine` from a new implementation branch.
+Implement `T-011 — Statistics Engine` using the approved First Release Fast
+Track plan.
 
 ```text
 feat(worker): add resilient flight sync job
