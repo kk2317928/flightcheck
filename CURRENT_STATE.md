@@ -80,7 +80,7 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- `TURBO_FORCE=true pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 158 Vitest tests and production builds for DB, Domain, Flight Source, Shared, Web and Worker.
+- `TURBO_FORCE=true pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 162 Vitest tests and production builds for DB, Domain, Flight Source, Shared, Web and Worker.
 - DB integration tests apply every migration in order to an empty embedded PostgreSQL instance, enforce event/post and snapshot uniqueness, verify conflict-safe SQL/status CAS behavior, and run the Prisma seed twice without duplicates.
 - Next.js production build exposes the public routes, protected `/admin`, login UI and three Admin auth endpoints; its database-backed proxy compiles successfully. Worker compiles to `dist/`.
 - The auth integration test uses embedded PostgreSQL to prove login, audit creation, session authentication, logout revocation and prevention of token reuse. Unit/route tests cover Argon2id, cookie flags, throttling and unauthorized page/API handling.

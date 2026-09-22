@@ -174,6 +174,14 @@ export function evaluateOperationalStatus(
     current.operationalStatus === 'CANCEL_PENDING' &&
     current.cancelConfirmedAt !== null
   ) {
+    const mapped = mapSourceStatus(sourceStatus);
+    if (TERMINAL.has(mapped)) {
+      return observedDecision(
+        decision(current, mapped, 'TERMINAL_ADVANCE', {
+          cancelledObservedCount: 0,
+        }),
+      );
+    }
     return observedDecision(
       decision(current, 'RECOVERED', 'RECOVERY_RETAINED', {
         cancelledObservedCount: 0,

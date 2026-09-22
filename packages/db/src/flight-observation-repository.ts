@@ -248,6 +248,25 @@ export function createFlightObservationRepository(
               data: { lastStatusObservedAt: input.lastStatusObservedAt },
             });
             if (watermarked.count === 1) return { changed: false };
+            const winner = await transaction.flightInstance.findUniqueOrThrow({
+              where: { id: input.flightInstanceId },
+              select: selectStatus,
+            });
+            if (
+              winner.operationalStatus === input.operationalStatus &&
+              winner.performanceStatus === input.performanceStatus &&
+              winner.delayMinutes === input.delayMinutes &&
+              winner.scheduleVarianceMinutes ===
+                input.scheduleVarianceMinutes &&
+              winner.cancelledObservedCount === input.cancelledObservedCount &&
+              datesEqual(winner.cancelConfirmedAt, input.cancelConfirmedAt) &&
+              datesEqual(
+                winner.lastStatusObservedAt,
+                input.lastStatusObservedAt,
+              )
+            ) {
+              return { changed: false };
+            }
             throw new Error('Stale status transition');
           }
 

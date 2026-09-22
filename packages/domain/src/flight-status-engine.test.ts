@@ -155,6 +155,35 @@ describe('applyFlightStatusObservation', () => {
     });
   });
 
+  it('does not overwrite performance from a replayed or older observation', async () => {
+    const writer: FlightStatusTransitionWriter = {
+      recordStatusTransition: vi.fn().mockResolvedValue({ changed: false }),
+    };
+    const result = await applyFlightStatusObservation(
+      input(writer, {
+        current: {
+          ...current,
+          performanceStatus: 'DELAYED',
+          delayMinutes: 30,
+          scheduleVarianceMinutes: 30,
+          lastStatusObservedAt: new Date('2026-09-22T08:20:00.000Z'),
+        },
+        observation: flight({
+          estimatedAt: new Date('2026-09-22T08:10:00.000Z'),
+        }),
+        observedAt: new Date('2026-09-22T08:10:00.000Z'),
+      }),
+    );
+
+    expect(result.decision).toMatchObject({
+      performanceStatus: 'DELAYED',
+      delayMinutes: 30,
+      scheduleVarianceMinutes: 30,
+      reason: 'OBSERVATION_REPLAY',
+      lastStatusObservedAt: new Date('2026-09-22T08:20:00.000Z'),
+    });
+  });
+
   it('preserves a transition-writer error for stale-policy retry', async () => {
     const stale = new Error('Stale status transition');
     const writer: FlightStatusTransitionWriter = {

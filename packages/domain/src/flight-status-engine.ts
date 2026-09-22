@@ -57,11 +57,13 @@ export async function applyFlightStatusObservation(
     input.observedAt,
   );
   const evaluatedPerformance = evaluatePerformanceStatus(input.observation);
-  const preservesTerminalPerformance =
-    ['DEPARTED', 'ARRIVED', 'DIVERTED'].includes(
+  const preservesCurrentPerformance =
+    operational.reason === 'OBSERVATION_REPLAY' ||
+    (['DEPARTED', 'ARRIVED', 'DIVERTED'].includes(
       input.current.operationalStatus,
-    ) && input.observation.actualAt === null;
-  const performance = preservesTerminalPerformance
+    ) &&
+      input.observation.actualAt === null);
+  const performance = preservesCurrentPerformance
     ? {
         performanceStatus: input.current.performanceStatus,
         delayMinutes: input.current.delayMinutes,

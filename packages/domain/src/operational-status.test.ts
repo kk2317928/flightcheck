@@ -100,6 +100,31 @@ describe('evaluateOperationalStatus', () => {
     },
   );
 
+  it.each(['DEPARTED', 'ARRIVED', 'DIVERTED'] as const)(
+    'advances an interrupted recancellation to terminal %s',
+    (sourceStatus) => {
+      const confirmedAt = at('08:10');
+      expect(
+        evaluateOperationalStatus(
+          {
+            ...initial,
+            operationalStatus: 'CANCEL_PENDING',
+            cancelledObservedCount: 1,
+            cancelConfirmedAt: confirmedAt,
+            lastStatusObservedAt: at('08:20'),
+          },
+          sourceStatus,
+          at('08:25'),
+        ),
+      ).toMatchObject({
+        operationalStatus: sourceStatus,
+        cancelledObservedCount: 0,
+        cancelConfirmedAt: confirmedAt,
+        reason: 'TERMINAL_ADVANCE',
+      });
+    },
+  );
+
   it('restarts confirmation after an unknown observation interrupts it', () => {
     const first = evaluateOperationalStatus(initial, 'CANCELLED', at('08:05'));
     const interrupted = evaluateOperationalStatus(
