@@ -43,6 +43,10 @@ export interface MacauAirportHttpClientOptions {
   retryDelayMs?: number;
 }
 
+export interface MacauAirportBoardClient {
+  fetchBoards(directions: FlightDirection[]): Promise<MacauAirportBoardResult>;
+}
+
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 250;
@@ -110,7 +114,7 @@ function matchesDirection(html: string, direction: FlightDirection): boolean {
   );
 }
 
-export class MacauAirportHttpClient {
+export class MacauAirportHttpClient implements MacauAirportBoardClient {
   readonly #fetch: typeof fetch;
   readonly #now: () => Date;
   readonly #sleep: (milliseconds: number) => Promise<void>;

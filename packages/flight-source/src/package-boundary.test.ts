@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 describe('flight-source package boundary', () => {
-  it('does not depend on an HTML parser in the contract task', () => {
+  it('keeps HTML parser dependencies out of the domain contracts', () => {
     const packagePath = fileURLToPath(
       new URL('../package.json', import.meta.url),
     );
@@ -12,6 +12,13 @@ describe('flight-source package boundary', () => {
       dependencies?: Record<string, string>;
     };
 
-    expect(Object.keys(packageJson.dependencies ?? {})).toEqual(['zod']);
+    expect(Object.keys(packageJson.dependencies ?? {})).toEqual(
+      expect.arrayContaining(['cheerio', 'zod']),
+    );
+
+    const contractsPath = fileURLToPath(
+      new URL('./contracts.ts', import.meta.url),
+    );
+    expect(readFileSync(contractsPath, 'utf8')).not.toMatch(/cheerio/i);
   });
 });
