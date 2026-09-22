@@ -59,7 +59,7 @@ T-002 added Zod environment validation, UTC/Asia-Macau time helpers, structured 
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- `pnpm verify` passes: formatting, ESLint, TypeScript, 19 Vitest tests and production builds for Shared, Web and Worker.
+- `pnpm verify` passes after loading `.env`: formatting, ESLint, TypeScript, 20 Vitest tests and production builds for Shared, Web and Worker.
 - Next.js production build exposes `/`, `/_not-found` and `/api/health`; Worker compiles to `dist/`.
 - `/api/health` returns the health contract with an `x-correlation-id` response header; Worker startup emits a structured `worker.ready` record with a job correlation ID.
 - Playwright configuration and a browser smoke test exist. Chromium could not be downloaded in this managed environment because the endpoint returned a zero-byte archive; run `pnpm exec playwright install chromium && pnpm test:e2e` on CI or a normal development host.

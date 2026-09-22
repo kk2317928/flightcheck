@@ -12,6 +12,8 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Macau
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
