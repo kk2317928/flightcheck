@@ -25,13 +25,13 @@ Checkpoint gate:
 - [x] T-007 Parser、機場詞典與狀態正規化
 - [x] T-008 Flight Persistence 與變更歷史
 - [x] T-009 Status Engine
-- [-] T-010 Flight Sync Use Case 與 Worker
+- [x] T-010 Flight Sync Use Case 與 Worker
 
 Checkpoint gate:
 
-- [ ] Acceptance A01–A12 and B01–B12 pass
-- [ ] Two fixture syncs prove CANCEL_PENDING → CANCELLED
-- [ ] Replaying identical data creates no duplicate instance/snapshot
+- [x] Acceptance A01–A12 and B01–B12 pass
+- [x] Two fixture syncs prove CANCEL_PENDING → CANCELLED
+- [x] Replaying identical data creates no duplicate instance/snapshot
 - [ ] Tag `cp-02-flight-engine`
 
 ## CP-03 — Statistics

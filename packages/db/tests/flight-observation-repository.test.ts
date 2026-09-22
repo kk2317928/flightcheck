@@ -81,14 +81,13 @@ describe('FlightObservationRepository', () => {
   it('persists a new observation with one flight instance and snapshot', async () => {
     const run = await createScrapeRun('run-first');
 
-    await expect(
-      repository.persistObservationBatch({
-        scrapeRunId: run.id,
-        observedAt: new Date('2026-09-22T08:05:00.000Z'),
-        flights: [departure],
-        warnings: [],
-      }),
-    ).resolves.toEqual({
+    const result = await repository.persistObservationBatch({
+      scrapeRunId: run.id,
+      observedAt: new Date('2026-09-22T08:05:00.000Z'),
+      flights: [departure],
+      warnings: [],
+    });
+    expect(result).toMatchObject({
       processedInstances: 1,
       insertedSnapshots: 1,
       unchangedSnapshots: 0,
@@ -98,6 +97,10 @@ describe('FlightObservationRepository', () => {
     await expect(prisma.flight.count()).resolves.toBe(1);
     await expect(prisma.flightInstance.count()).resolves.toBe(1);
     await expect(prisma.flightSnapshot.count()).resolves.toBe(1);
+    const instance = await prisma.flightInstance.findFirstOrThrow();
+    expect(result.instances).toEqual([
+      { flightInstanceId: instance.id, observation: departure },
+    ]);
   });
 
   it('replays an identical material payload without a second snapshot', async () => {
@@ -110,14 +113,13 @@ describe('FlightObservationRepository', () => {
       warnings: [],
     });
 
-    await expect(
-      repository.persistObservationBatch({
-        scrapeRunId: replayRun.id,
-        observedAt: new Date('2026-09-22T08:10:00.000Z'),
-        flights: [{ ...departure }],
-        warnings: [],
-      }),
-    ).resolves.toEqual({
+    const replay = await repository.persistObservationBatch({
+      scrapeRunId: replayRun.id,
+      observedAt: new Date('2026-09-22T08:10:00.000Z'),
+      flights: [{ ...departure }],
+      warnings: [],
+    });
+    expect(replay).toMatchObject({
       processedInstances: 1,
       insertedSnapshots: 0,
       unchangedSnapshots: 1,
@@ -125,13 +127,15 @@ describe('FlightObservationRepository', () => {
     });
 
     await expect(prisma.flightSnapshot.count()).resolves.toBe(1);
-    await expect(
-      prisma.flightInstance.findFirstOrThrow({
-        select: { lastObservedAt: true },
-      }),
-    ).resolves.toEqual({
+    const instance = await prisma.flightInstance.findFirstOrThrow({
+      select: { id: true, lastObservedAt: true },
+    });
+    expect(instance).toMatchObject({
       lastObservedAt: new Date('2026-09-22T08:10:00.000Z'),
     });
+    expect(replay.instances).toEqual([
+      { flightInstanceId: instance.id, observation: departure },
+    ]);
   });
 
   it('creates one snapshot for a material change and none for its replay', async () => {
@@ -177,7 +181,7 @@ describe('FlightObservationRepository', () => {
       destination: departure.origin,
     };
 
-    await repository.persistObservationBatch({
+    const result = await repository.persistObservationBatch({
       scrapeRunId: run.id,
       observedAt: new Date('2026-09-22T08:05:00.000Z'),
       flights: [departure, arrival],
@@ -204,6 +208,14 @@ describe('FlightObservationRepository', () => {
         scheduledArrivalAt: arrival.scheduledAt,
       },
     ]);
+    expect(result.instances).toHaveLength(2);
+    expect(
+      new Set(result.instances.map(({ flightInstanceId }) => flightInstanceId))
+        .size,
+    ).toBe(2);
+    expect(
+      result.instances.map(({ observation }) => observation.direction),
+    ).toEqual(['DEPARTURE', 'ARRIVAL']);
   });
 
   it('preserves status-engine fields when refreshing an observation', async () => {

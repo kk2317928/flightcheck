@@ -8,13 +8,19 @@
     "dev": "tsx --env-file=../../.env watch src/index.ts",
     "lint": "eslint .",
     "start": "node --env-file-if-exists=../../.env dist/index.js",
+    "sync": "tsx --env-file=../../.env src/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@flightcheck/db": "workspace:*",
+    "@flightcheck/domain": "workspace:*",
+    "@flightcheck/flight-source": "workspace:*",
     "@flightcheck/shared": "workspace:*"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.4.3",
+    "@electric-sql/pglite-socket": "^0.1.3",
     "@types/node": "^24.3.1",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",

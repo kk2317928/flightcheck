@@ -2,11 +2,12 @@
 
 > Updated: 2026-09-22  
 > Branch: `feat/t-010-flight-sync-worker`  
-> Baseline commit inspected: `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`
+> Baseline commit: `c4112760556e72d580d87fe0a68ff80b5bd2d2de`
 
 ## Project Phase
 
-CP-02 implementation is active. T-001 through T-009 are verified; T-010 design is active.
+CP-02 implementation is complete through T-010. The automated CP-02 gate is
+green; the checkpoint tag remains intentionally uncreated pending gate review.
 
 The repository began with documentation only. It now contains:
 
@@ -54,6 +55,7 @@ The repository began with documentation only. It now contains:
 | T-007 Macau Airport parser          | Complete                       | NX filtering, IATA/status/time normalization, warnings, deduplication and adapter   |
 | T-008 Flight persistence            | Complete                       | Atomic upserts, changed-only snapshots, warning storage and guarded status history  |
 | T-009 Status engine                 | Complete                       | Pure status policy, cancellation confirmation, terminal protection and full CAS     |
+| T-010 Flight sync Worker            | Complete                       | Global lease, directional runs, stale re-evaluation, CLI and five-minute scheduler  |
 
 ## Active Checkpoint
 
@@ -61,7 +63,19 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-010 — Flight Sync Use Case 與 Worker` is active. Its approved design and implementation plan use one reusable Worker orchestration service, independent departure/arrival runs, a global lease, one stale-decision re-evaluation, a five-minute interval, and a manual CLI. Product-code implementation has not started.
+`T-010 — Flight Sync Use Case 與 Worker` is verified. One reusable Worker
+service performs separate concurrent departure/arrival calls under the global
+`flight-sync` lease. Each direction owns its ScrapeRun and commits independently;
+FAILED source results never persist observations, while usable PARTIAL results,
+including zero-flight results, remain truthful PARTIAL runs. Only explicit
+persisted instances reach the status engine. A stale transition reloads the full
+post-persistence policy state and re-evaluates once; a second conflict fails the
+direction with `STATUS_CONFLICT`.
+
+The same use case powers the validated manual CLI and the startup/five-minute
+scheduler. Timer failures are logged without stopping later ticks. Shutdown
+signals stop new scheduling. The protected Admin trigger remains T-023 scope;
+heartbeat, registry, and recovery coordination remain T-027 scope.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -80,7 +94,22 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- `TURBO_FORCE=true pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 162 Vitest tests and production builds for DB, Domain, Flight Source, Shared, Web and Worker.
+- T-010 targeted verification passes: Flight Source 35 tests, Domain 53 tests,
+  DB 46 tests, and Worker 23 tests.
+- `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
+  passes: formatting, all 6 package lint/typecheck/build tasks, and 199 tests
+  (Shared 15, Flight Source 35, Domain 53, DB 46, Worker 23, Web 27).
+
+### T-010 — Flight Sync Use Case 與 Worker
+
+- Commit: `feat(worker): add resilient flight sync job` (this implementation commit)
+- Verification: CP-02 targeted package suites → 157 tests passed; fresh
+  `pnpm verify` → 199 tests and all 6 package lint/typecheck/build passed.
+- Decisions: one global owner-qualified lease; separate concurrent directional
+  runs; partial direction commits independently; missing rows have no status
+  meaning; stale CAS reloads and re-evaluates once; CLI and timer share one use
+  case.
+- Follow-up: review CP-02 gate/tag, then start T-011 on a new branch.
 - DB integration tests apply every migration in order to an empty embedded PostgreSQL instance, enforce event/post and snapshot uniqueness, verify conflict-safe SQL/status CAS behavior, and run the Prisma seed twice without duplicates.
 - Next.js production build exposes the public routes, protected `/admin`, login UI and three Admin auth endpoints; its database-backed proxy compiles successfully. Worker compiles to `dist/`.
 - The auth integration test uses embedded PostgreSQL to prove login, audit creation, session authentication, logout revocation and prevention of token reuse. Unit/route tests cover Argon2id, cookie flags, throttling and unauthorized page/API handling.
@@ -97,7 +126,8 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Review `docs/superpowers/plans/2026-09-22-flight-sync-worker.md`, select the execution approach, then implement the plan with TDD. Do not begin product-code implementation before that selection.
+Review the CP-02 gate and create the checkpoint tag if approved, then begin
+`T-011 — Statistics Engine` from a new implementation branch.
 
 ```text
 feat(worker): add resilient flight sync job

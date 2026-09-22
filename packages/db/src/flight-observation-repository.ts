@@ -32,6 +32,12 @@ export interface PersistObservationBatchResult {
   insertedSnapshots: number;
   unchangedSnapshots: number;
   persistedWarnings: number;
+  instances: PersistedFlightObservation[];
+}
+
+export interface PersistedFlightObservation {
+  flightInstanceId: string;
+  observation: NormalizedFlight;
 }
 
 export interface RecordStatusTransitionInput {
@@ -98,6 +104,7 @@ export function createFlightObservationRepository(
           });
 
           let insertedSnapshots = 0;
+          const instances: PersistedFlightObservation[] = [];
 
           for (const candidate of input.flights) {
             const observation = NormalizedFlightSchema.parse(candidate);
@@ -145,6 +152,10 @@ export function createFlightObservationRepository(
               },
               select: { id: true },
             });
+            instances.push({
+              flightInstanceId: instance.id,
+              observation,
+            });
             const payload = buildCanonicalFlightSnapshot(observation);
             const snapshot = await transaction.flightSnapshot.createMany({
               data: [
@@ -178,6 +189,7 @@ export function createFlightObservationRepository(
             insertedSnapshots,
             unchangedSnapshots: input.flights.length - insertedSnapshots,
             persistedWarnings: warnings.length,
+            instances,
           };
         });
       } catch (error) {

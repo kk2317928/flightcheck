@@ -58,6 +58,19 @@ It deduplicates a target that already won and rejects any other stale decision
 instead of overwriting newer state. T-010 must reload current state and
 re-evaluate policy after a stale rejection.
 
+## Worker synchronization records and lease
+
+`createJobLockRepository` atomically acquires the global `flight-sync` lease,
+replacing it only after expiry. Renewal and release require the same `name` and
+`ownerId`, so an expired owner cannot modify a successor's lease.
+
+`createFlightSyncRepository` creates one RUNNING `ScrapeRun` for departures and
+one for arrivals, completes each exactly once, and loads the complete current
+status-policy state. Runs finish as `SUCCESS`, `PARTIAL`, or `FAILED` with source
+timestamps, counts, warnings, and a stable error code. Observation persistence
+returns the exact direction-specific instance IDs it touched; unchanged
+snapshots still return their instance reference for explicit status evaluation.
+
 ## Roll back an application release
 
 Prisma production migrations are forward-only. To roll back application code, deploy the previous application version without deleting or editing an applied migration. If a schema correction is required, create and deploy a new forward migration.

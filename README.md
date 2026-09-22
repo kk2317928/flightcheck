@@ -23,14 +23,31 @@ pnpm dev
 
 The Web app runs at `http://localhost:3000`. Its health endpoint is `GET /api/health`.
 
-The Worker foundation can be built and run independently:
+The Worker can be built and run independently. It performs one sync at startup,
+then attempts another sync every five minutes:
 
 ```bash
 pnpm turbo run build --filter=@flightcheck/worker
 pnpm --filter @flightcheck/worker start
 ```
 
-It prints a structured `worker.ready` event with a job correlation ID and exits. Persistent scheduling starts in later Tasks.
+It prints structured lifecycle records and uses a global `flight-sync` database
+lease, so overlapping scheduled or manual attempts are skipped safely.
+
+Run the same synchronization use case manually for the current Macau date, or
+provide an explicit service date:
+
+```bash
+pnpm --filter @flightcheck/worker sync
+pnpm --filter @flightcheck/worker sync -- --date 2026-09-22
+```
+
+Departures and arrivals have independent `ScrapeRun` records and outcomes. A
+usable partial board is committed; one failed direction produces overall
+`PARTIAL`, both failed directions produce `FAILED`, and lock contention produces
+`SKIPPED_LOCKED`. Missing board rows have no status meaning and never imply a
+cancellation. A protected Admin trigger belongs to T-023; advanced scheduler
+recovery and heartbeat coordination belong to T-027.
 
 Initialize an empty PostgreSQL database with the committed migration and idempotent seed:
 
@@ -74,7 +91,7 @@ pnpm test:e2e
 
 ```text
 apps/web/       Next.js App Router public and Admin application
-apps/worker/    persistent Node.js worker foundation
+apps/worker/    persistent flight-sync worker, manual CLI and scheduler
 packages/shared validated configuration, Macau time and observability utilities
 packages/db     PostgreSQL schema, Prisma client, migrations and seed
 packages/flight-source external flight-source contracts and normalized data boundary
