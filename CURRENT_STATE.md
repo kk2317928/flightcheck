@@ -1,12 +1,12 @@
 # FlightCheck Current State
 
 > Updated: 2026-09-22  
-> Branch: `feat/t-008-flight-persistence`  
+> Branch: `feat/t-009-status-engine`  
 > Baseline commit inspected: `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`
 
 ## Project Phase
 
-CP-02 implementation is active. T-001 through T-008 are verified.
+CP-02 implementation is active. T-001 through T-008 are verified; T-009 design is active.
 
 The repository began with documentation only. It now contains:
 
@@ -59,7 +59,7 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-008 — Flight Persistence 與變更歷史` is complete. The next Task is `T-009 — Status Engine`.
+`T-009 — Status Engine` is active. Its approved design defines the pure domain package, performance thresholds, cancellation state machine, recovery, terminal regression protection, and full-field compare-and-set persistence contract.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -93,7 +93,7 @@ T-008 added `FlightObservationRepository` to `@flightcheck/db`. Each normalized 
 
 ## Next Exact Action
 
-Start T-009 Status Engine using `recordStatusTransition` expected-state semantics. Implement operational/performance rules, including two consecutive explicit cancellation observations and recovery, without moving policy into the persistence repository.
+Review and approve `docs/superpowers/specs/2026-09-22-flight-status-engine-design.md`, then write the T-009 implementation plan. Do not begin product-code implementation before that plan is approved.
 
 ```text
 feat(status): implement operational and performance rules
