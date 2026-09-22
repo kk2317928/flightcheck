@@ -59,7 +59,7 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-009 — Status Engine` is active. Its approved design defines the pure domain package, performance thresholds, cancellation state machine, recovery, terminal regression protection, and full-field compare-and-set persistence contract.
+`T-009 — Status Engine` is active. Its approved design and implementation plan define the pure domain package, performance thresholds, cancellation state machine, recovery, terminal regression protection, and full-field compare-and-set persistence contract. Product-code implementation has not started.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -93,7 +93,7 @@ T-008 added `FlightObservationRepository` to `@flightcheck/db`. Each normalized 
 
 ## Next Exact Action
 
-Review and approve `docs/superpowers/specs/2026-09-22-flight-status-engine-design.md`, then write the T-009 implementation plan. Do not begin product-code implementation before that plan is approved.
+Review `docs/superpowers/plans/2026-09-22-flight-status-engine.md`, select the execution approach, then implement the plan with TDD. Do not begin T-010 before T-009 verification and checkpoint completion.
 
 ```text
 feat(status): implement operational and performance rules
