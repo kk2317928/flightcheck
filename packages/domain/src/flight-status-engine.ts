@@ -18,12 +18,14 @@ export interface FlightStatusTransitionWriter {
     expectedScheduleVarianceMinutes: number | null;
     expectedCancelledObservedCount: number;
     expectedCancelConfirmedAt: Date | null;
+    expectedLastStatusObservedAt: Date | null;
     operationalStatus: OperationalStatus;
     performanceStatus: PerformanceStatus;
     delayMinutes: number | null;
     scheduleVarianceMinutes: number | null;
     cancelledObservedCount: number;
     cancelConfirmedAt: Date | null;
+    lastStatusObservedAt: Date;
     reason: StatusReason;
     observedAt: Date;
   }): Promise<{ changed: boolean }>;
@@ -54,11 +56,23 @@ export async function applyFlightStatusObservation(
     input.observation.sourceStatus,
     input.observedAt,
   );
-  const performance = evaluatePerformanceStatus(input.observation);
+  const evaluatedPerformance = evaluatePerformanceStatus(input.observation);
+  const preservesTerminalPerformance =
+    ['DEPARTED', 'ARRIVED', 'DIVERTED'].includes(
+      input.current.operationalStatus,
+    ) && input.observation.actualAt === null;
+  const performance = preservesTerminalPerformance
+    ? {
+        performanceStatus: input.current.performanceStatus,
+        delayMinutes: input.current.delayMinutes,
+        scheduleVarianceMinutes: input.current.scheduleVarianceMinutes,
+      }
+    : evaluatedPerformance;
   const decision: FlightStatusDecision = {
     ...input.current,
     ...operational,
     ...performance,
+    lastStatusObservedAt: operational.lastStatusObservedAt,
   };
 
   const result = await input.writer.recordStatusTransition({
@@ -69,12 +83,14 @@ export async function applyFlightStatusObservation(
     expectedScheduleVarianceMinutes: input.current.scheduleVarianceMinutes,
     expectedCancelledObservedCount: input.current.cancelledObservedCount,
     expectedCancelConfirmedAt: input.current.cancelConfirmedAt,
+    expectedLastStatusObservedAt: input.current.lastStatusObservedAt,
     operationalStatus: decision.operationalStatus,
     performanceStatus: decision.performanceStatus,
     delayMinutes: decision.delayMinutes,
     scheduleVarianceMinutes: decision.scheduleVarianceMinutes,
     cancelledObservedCount: decision.cancelledObservedCount,
     cancelConfirmedAt: decision.cancelConfirmedAt,
+    lastStatusObservedAt: operational.lastStatusObservedAt,
     reason: decision.reason,
     observedAt: input.observedAt,
   });

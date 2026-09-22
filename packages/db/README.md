@@ -47,14 +47,16 @@ Cancellation confirmation requires two consecutive explicit `CANCELLED`
 observations. A missing airport-board row never becomes an observation and must
 not call the status engine. The first cancellation becomes `CANCEL_PENDING`;
 the second becomes `CANCELLED` with `cancelConfirmedAt`. A later explicit
-non-cancelled observation becomes `RECOVERED`.
+non-cancelled observation becomes `RECOVERED`. The status-observation watermark
+prevents a replayed or out-of-order observation from advancing confirmation.
 
 The repository compare-and-set covers operational status, performance status,
-delay, schedule variance, cancellation observation count and confirmation time
-as one policy state. It writes history only when the persisted state actually
-changes, deduplicates a target that already won, and rejects any other stale
-decision instead of overwriting newer state. T-010 must reload current state
-and re-evaluate policy after a stale rejection.
+delay, schedule variance, cancellation observation count, confirmation time and
+the processing watermark as one policy state. It writes history only when the
+persisted status actually changes; a watermark-only update remains history-free.
+It deduplicates a target that already won and rejects any other stale decision
+instead of overwriting newer state. T-010 must reload current state and
+re-evaluate policy after a stale rejection.
 
 ## Roll back an application release
 

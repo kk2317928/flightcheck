@@ -10,6 +10,7 @@ const initial: FlightStatusState = {
   scheduleVarianceMinutes: null,
   cancelledObservedCount: 0,
   cancelConfirmedAt: null,
+  lastStatusObservedAt: null,
 };
 
 function at(time: string): Date {
@@ -27,7 +28,7 @@ describe('evaluateOperationalStatus', () => {
   ] as const)('maps source %s to %s', (sourceStatus, operationalStatus) => {
     expect(
       evaluateOperationalStatus(initial, sourceStatus, at('08:05')),
-    ).toEqual({
+    ).toMatchObject({
       operationalStatus,
       cancelledObservedCount: 0,
       cancelConfirmedAt: null,
@@ -37,7 +38,7 @@ describe('evaluateOperationalStatus', () => {
 
   it('requires two consecutive explicit cancellations', () => {
     const first = evaluateOperationalStatus(initial, 'CANCELLED', at('08:05'));
-    expect(first).toEqual({
+    expect(first).toMatchObject({
       operationalStatus: 'CANCEL_PENDING',
       cancelledObservedCount: 1,
       cancelConfirmedAt: null,
@@ -49,13 +50,55 @@ describe('evaluateOperationalStatus', () => {
       'CANCELLED',
       at('08:10'),
     );
-    expect(second).toEqual({
+    expect(second).toMatchObject({
       operationalStatus: 'CANCELLED',
       cancelledObservedCount: 2,
       cancelConfirmedAt: at('08:10'),
       reason: 'CANCELLATION_CONFIRMED',
     });
   });
+
+  it('does not count a replayed observation as a second cancellation', () => {
+    const first = evaluateOperationalStatus(initial, 'CANCELLED', at('08:05'));
+
+    expect(
+      evaluateOperationalStatus(
+        { ...initial, ...first },
+        'CANCELLED',
+        at('08:05'),
+      ),
+    ).toMatchObject({
+      operationalStatus: 'CANCEL_PENDING',
+      cancelledObservedCount: 1,
+      reason: 'OBSERVATION_REPLAY',
+      lastStatusObservedAt: at('08:05'),
+    });
+  });
+
+  it.each(['SCHEDULED', 'DELAYED', 'UNKNOWN'] as const)(
+    'restores recovery when recancellation is interrupted by %s',
+    (sourceStatus) => {
+      const confirmedAt = at('08:10');
+      expect(
+        evaluateOperationalStatus(
+          {
+            ...initial,
+            operationalStatus: 'CANCEL_PENDING',
+            cancelledObservedCount: 1,
+            cancelConfirmedAt: confirmedAt,
+            lastStatusObservedAt: at('08:20'),
+          },
+          sourceStatus,
+          at('08:25'),
+        ),
+      ).toMatchObject({
+        operationalStatus: 'RECOVERED',
+        cancelledObservedCount: 0,
+        cancelConfirmedAt: confirmedAt,
+        reason: 'RECOVERY_RETAINED',
+      });
+    },
+  );
 
   it('restarts confirmation after an unknown observation interrupts it', () => {
     const first = evaluateOperationalStatus(initial, 'CANCELLED', at('08:05'));
@@ -64,7 +107,7 @@ describe('evaluateOperationalStatus', () => {
       'UNKNOWN',
       at('08:10'),
     );
-    expect(interrupted).toEqual({
+    expect(interrupted).toMatchObject({
       operationalStatus: 'UNKNOWN',
       cancelledObservedCount: 0,
       cancelConfirmedAt: null,
@@ -96,7 +139,7 @@ describe('evaluateOperationalStatus', () => {
         'CANCELLED',
         at('08:15'),
       ),
-    ).toEqual({
+    ).toMatchObject({
       operationalStatus: 'CANCELLED',
       cancelledObservedCount: 2,
       cancelConfirmedAt: confirmedAt,
@@ -117,7 +160,7 @@ describe('evaluateOperationalStatus', () => {
         'SCHEDULED',
         at('08:15'),
       ),
-    ).toEqual({
+    ).toMatchObject({
       operationalStatus: 'RECOVERED',
       cancelledObservedCount: 0,
       cancelConfirmedAt: confirmedAt,
@@ -139,7 +182,7 @@ describe('evaluateOperationalStatus', () => {
           sourceStatus,
           at('08:20'),
         ),
-      ).toEqual({
+      ).toMatchObject({
         operationalStatus: 'RECOVERED',
         cancelledObservedCount: 0,
         cancelConfirmedAt: confirmedAt,
@@ -162,7 +205,7 @@ describe('evaluateOperationalStatus', () => {
           sourceStatus,
           at('08:20'),
         ),
-      ).toEqual({
+      ).toMatchObject({
         operationalStatus: sourceStatus,
         cancelledObservedCount: 0,
         cancelConfirmedAt: confirmedAt,
@@ -183,7 +226,7 @@ describe('evaluateOperationalStatus', () => {
         'CANCELLED',
         at('08:20'),
       ),
-    ).toEqual({
+    ).toMatchObject({
       operationalStatus: 'CANCEL_PENDING',
       cancelledObservedCount: 1,
       cancelConfirmedAt: confirmedAt,
@@ -219,7 +262,7 @@ describe('evaluateOperationalStatus', () => {
             sourceStatus,
             at('08:20'),
           ),
-        ).toEqual({
+        ).toMatchObject({
           operationalStatus,
           cancelledObservedCount: 0,
           cancelConfirmedAt: null,
@@ -236,6 +279,16 @@ describe('evaluateOperationalStatus', () => {
       operationalStatus: 'CANCELLED' as OperationalStatus,
       cancelledObservedCount: 2,
       cancelConfirmedAt: null,
+    },
+    {
+      operationalStatus: 'CANCELLED' as OperationalStatus,
+      cancelledObservedCount: 0,
+      cancelConfirmedAt: at('08:10'),
+    },
+    {
+      operationalStatus: 'CANCELLED' as OperationalStatus,
+      cancelledObservedCount: 2,
+      cancelConfirmedAt: new Date(Number.NaN),
     },
   ])('rejects inconsistent current state: $overrides', (overrides) => {
     expect(() =>

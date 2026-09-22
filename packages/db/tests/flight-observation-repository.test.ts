@@ -336,16 +336,23 @@ describe('FlightObservationRepository', () => {
         expectedScheduleVarianceMinutes: null,
         expectedCancelledObservedCount: 0,
         expectedCancelConfirmedAt: null,
+        expectedLastStatusObservedAt: null,
         operationalStatus: 'SCHEDULED',
         performanceStatus: 'PENDING',
         delayMinutes: null,
         scheduleVarianceMinutes: null,
         cancelledObservedCount: 0,
         cancelConfirmedAt: null,
+        lastStatusObservedAt: new Date('2026-09-22T08:06:00.000Z'),
         reason: 'No material status change',
         observedAt: new Date('2026-09-22T08:06:00.000Z'),
       }),
     ).resolves.toEqual({ changed: false });
+    await expect(
+      prisma.flightInstance.findUniqueOrThrow({ where: { id: instance.id } }),
+    ).resolves.toMatchObject({
+      lastStatusObservedAt: new Date('2026-09-22T08:06:00.000Z'),
+    });
     await expect(prisma.flightStatusHistory.count()).resolves.toBe(0);
   });
 
@@ -368,12 +375,14 @@ describe('FlightObservationRepository', () => {
         expectedScheduleVarianceMinutes: null,
         expectedCancelledObservedCount: 0,
         expectedCancelConfirmedAt: null,
+        expectedLastStatusObservedAt: null,
         operationalStatus: 'CANCEL_PENDING',
         performanceStatus: 'DELAYED',
         delayMinutes: 20,
         scheduleVarianceMinutes: 20,
         cancelledObservedCount: 1,
         cancelConfirmedAt: null,
+        lastStatusObservedAt: new Date('2026-09-22T08:06:00.000Z'),
         reason: 'First explicit cancellation observation',
         observedAt: new Date('2026-09-22T08:06:00.000Z'),
       }),
@@ -420,12 +429,14 @@ describe('FlightObservationRepository', () => {
       expectedScheduleVarianceMinutes: null,
       expectedCancelledObservedCount: 0,
       expectedCancelConfirmedAt: null,
+      expectedLastStatusObservedAt: null,
       operationalStatus: 'CANCEL_PENDING' as const,
       performanceStatus: 'DELAYED' as const,
       delayMinutes: 20,
       scheduleVarianceMinutes: 20,
       cancelledObservedCount: 1,
       cancelConfirmedAt: null,
+      lastStatusObservedAt: new Date('2026-09-22T08:06:00.000Z'),
       reason: 'Concurrent first cancellation observation',
       observedAt: new Date('2026-09-22T08:06:00.000Z'),
     };
@@ -527,12 +538,14 @@ describe('FlightObservationRepository', () => {
         expectedScheduleVarianceMinutes: null,
         expectedCancelledObservedCount: 0,
         expectedCancelConfirmedAt: null,
+        expectedLastStatusObservedAt: null,
         operationalStatus: 'CANCEL_PENDING',
         performanceStatus: 'PENDING',
         delayMinutes: null,
         scheduleVarianceMinutes: null,
         cancelledObservedCount: 1,
         cancelConfirmedAt: null,
+        lastStatusObservedAt: new Date('2026-09-22T08:06:00.000Z'),
         reason: 'Stale first cancellation observation',
         observedAt: new Date('2026-09-22T08:06:00.000Z'),
       }),
@@ -566,12 +579,14 @@ describe('FlightObservationRepository', () => {
         expectedScheduleVarianceMinutes: null,
         expectedCancelledObservedCount: 0,
         expectedCancelConfirmedAt: null,
+        expectedLastStatusObservedAt: null,
         operationalStatus: 'CANCEL_PENDING',
         performanceStatus: 'PENDING',
         delayMinutes: null,
         scheduleVarianceMinutes: null,
         cancelledObservedCount: 1,
         cancelConfirmedAt: null,
+        lastStatusObservedAt: new Date('2026-09-22T08:06:00.000Z'),
         reason: 'Stale cancellation count',
         observedAt: new Date('2026-09-22T08:06:00.000Z'),
       }),
@@ -603,13 +618,55 @@ describe('FlightObservationRepository', () => {
         expectedScheduleVarianceMinutes: null,
         expectedCancelledObservedCount: 0,
         expectedCancelConfirmedAt: null,
+        expectedLastStatusObservedAt: null,
         operationalStatus: 'CANCEL_PENDING',
         performanceStatus: 'PENDING',
         delayMinutes: null,
         scheduleVarianceMinutes: null,
         cancelledObservedCount: 1,
         cancelConfirmedAt: null,
+        lastStatusObservedAt: new Date('2026-09-22T08:06:00.000Z'),
         reason: 'Stale confirmation time',
+        observedAt: new Date('2026-09-22T08:06:00.000Z'),
+      }),
+    ).rejects.toThrow(/stale status transition/i);
+    await expect(prisma.flightStatusHistory.count()).resolves.toBe(0);
+  });
+
+  it('rejects a stale transition when only the status observation watermark changed', async () => {
+    const run = await createScrapeRun('run-status-stale-watermark');
+    await repository.persistObservationBatch({
+      scrapeRunId: run.id,
+      observedAt: new Date('2026-09-22T08:05:00.000Z'),
+      flights: [departure],
+      warnings: [],
+    });
+    const instance = await prisma.flightInstance.findFirstOrThrow();
+    await prisma.flightInstance.update({
+      where: { id: instance.id },
+      data: {
+        lastStatusObservedAt: new Date('2026-09-22T08:05:30.000Z'),
+      },
+    });
+
+    await expect(
+      repository.recordStatusTransition({
+        flightInstanceId: instance.id,
+        expectedOperationalStatus: 'SCHEDULED',
+        expectedPerformanceStatus: 'PENDING',
+        expectedDelayMinutes: null,
+        expectedScheduleVarianceMinutes: null,
+        expectedCancelledObservedCount: 0,
+        expectedCancelConfirmedAt: null,
+        expectedLastStatusObservedAt: null,
+        operationalStatus: 'CANCEL_PENDING',
+        performanceStatus: 'PENDING',
+        delayMinutes: null,
+        scheduleVarianceMinutes: null,
+        cancelledObservedCount: 1,
+        cancelConfirmedAt: null,
+        lastStatusObservedAt: new Date('2026-09-22T08:06:00.000Z'),
+        reason: 'Stale observation watermark',
         observedAt: new Date('2026-09-22T08:06:00.000Z'),
       }),
     ).rejects.toThrow(/stale status transition/i);

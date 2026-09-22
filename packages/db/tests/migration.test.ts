@@ -63,14 +63,17 @@ describe('initial PostgreSQL migration', () => {
     );
   });
 
-  it('adds signed schedule variance to flight instances', async () => {
+  it('adds status-engine policy fields to flight instances', async () => {
     const result = await db.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns
        WHERE table_schema = 'public' AND table_name = 'FlightInstance'`,
     );
 
-    expect(result.rows.map(({ column_name }) => column_name)).toContain(
-      'scheduleVarianceMinutes',
+    expect(result.rows.map(({ column_name }) => column_name)).toEqual(
+      expect.arrayContaining([
+        'scheduleVarianceMinutes',
+        'lastStatusObservedAt',
+      ]),
     );
   });
 

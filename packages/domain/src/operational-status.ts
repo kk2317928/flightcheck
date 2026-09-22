@@ -21,9 +21,17 @@ function assertCurrentState(current: FlightStatusState): void {
   }
   if (
     current.operationalStatus === 'CANCELLED' &&
-    current.cancelConfirmedAt === null
+    (current.cancelledObservedCount !== 2 ||
+      current.cancelConfirmedAt === null ||
+      !Number.isFinite(current.cancelConfirmedAt.getTime()))
   ) {
-    throw new TypeError('Confirmed cancellation requires cancelConfirmedAt');
+    throw new TypeError('Invalid confirmed cancellation state');
+  }
+  if (
+    current.lastStatusObservedAt !== null &&
+    !Number.isFinite(current.lastStatusObservedAt.getTime())
+  ) {
+    throw new TypeError('Invalid last status observation time');
   }
 }
 
@@ -51,6 +59,7 @@ function decision(
         ? current.cancelConfirmedAt
         : overrides.cancelConfirmedAt,
     reason,
+    lastStatusObservedAt: current.lastStatusObservedAt ?? new Date(0),
   };
 }
 
@@ -63,54 +72,83 @@ export function evaluateOperationalStatus(
   if (!Number.isFinite(observedAt.getTime())) {
     throw new TypeError('Invalid observation time');
   }
+  if (
+    current.lastStatusObservedAt !== null &&
+    observedAt.getTime() <= current.lastStatusObservedAt.getTime()
+  ) {
+    return {
+      operationalStatus: current.operationalStatus,
+      cancelledObservedCount: current.cancelledObservedCount,
+      cancelConfirmedAt: current.cancelConfirmedAt,
+      reason: 'OBSERVATION_REPLAY',
+      lastStatusObservedAt: current.lastStatusObservedAt,
+    };
+  }
+
+  const observedDecision = (
+    value: Omit<OperationalDecision, 'lastStatusObservedAt'> & {
+      lastStatusObservedAt: Date;
+    },
+  ): OperationalDecision => ({ ...value, lastStatusObservedAt: observedAt });
 
   if (TERMINAL.has(current.operationalStatus)) {
     if (
       current.operationalStatus === 'DEPARTED' &&
       sourceStatus === 'ARRIVED'
     ) {
-      return decision(current, 'ARRIVED', 'TERMINAL_ADVANCE');
+      return observedDecision(decision(current, 'ARRIVED', 'TERMINAL_ADVANCE'));
     }
     if (
       sourceStatus !== 'CANCELLED' &&
       mapSourceStatus(sourceStatus) === current.operationalStatus
     ) {
-      return decision(current, current.operationalStatus, 'SOURCE_STATUS');
+      return observedDecision(
+        decision(current, current.operationalStatus, 'SOURCE_STATUS'),
+      );
     }
-    return decision(
-      current,
-      current.operationalStatus,
-      'TERMINAL_REGRESSION_BLOCKED',
+    return observedDecision(
+      decision(
+        current,
+        current.operationalStatus,
+        'TERMINAL_REGRESSION_BLOCKED',
+      ),
     );
   }
 
   if (current.operationalStatus === 'CANCELLED') {
     if (sourceStatus === 'CANCELLED') {
-      return decision(current, 'CANCELLED', 'CANCELLATION_REPLAY');
+      return observedDecision(
+        decision(current, 'CANCELLED', 'CANCELLATION_REPLAY'),
+      );
     }
-    return decision(current, 'RECOVERED', 'CANCELLATION_RECOVERED', {
-      cancelledObservedCount: 0,
-    });
+    return observedDecision(
+      decision(current, 'RECOVERED', 'CANCELLATION_RECOVERED', {
+        cancelledObservedCount: 0,
+      }),
+    );
   }
 
   if (current.operationalStatus === 'RECOVERED') {
     if (sourceStatus === 'CANCELLED') {
-      return decision(
-        current,
-        'CANCEL_PENDING',
-        'FIRST_CANCELLATION_OBSERVATION',
-        { cancelledObservedCount: 1 },
+      return observedDecision(
+        decision(current, 'CANCEL_PENDING', 'FIRST_CANCELLATION_OBSERVATION', {
+          cancelledObservedCount: 1,
+        }),
       );
     }
     const mapped = mapSourceStatus(sourceStatus);
     if (TERMINAL.has(mapped)) {
-      return decision(current, mapped, 'TERMINAL_ADVANCE', {
-        cancelledObservedCount: 0,
-      });
+      return observedDecision(
+        decision(current, mapped, 'TERMINAL_ADVANCE', {
+          cancelledObservedCount: 0,
+        }),
+      );
     }
-    return decision(current, 'RECOVERED', 'RECOVERY_RETAINED', {
-      cancelledObservedCount: 0,
-    });
+    return observedDecision(
+      decision(current, 'RECOVERED', 'RECOVERY_RETAINED', {
+        cancelledObservedCount: 0,
+      }),
+    );
   }
 
   if (sourceStatus === 'CANCELLED') {
@@ -118,26 +156,40 @@ export function evaluateOperationalStatus(
       current.operationalStatus === 'CANCEL_PENDING' &&
       current.cancelledObservedCount >= 1
     ) {
-      return decision(current, 'CANCELLED', 'CANCELLATION_CONFIRMED', {
-        cancelledObservedCount: 2,
-        cancelConfirmedAt: observedAt,
-      });
+      return observedDecision(
+        decision(current, 'CANCELLED', 'CANCELLATION_CONFIRMED', {
+          cancelledObservedCount: 2,
+          cancelConfirmedAt: observedAt,
+        }),
+      );
     }
-    return decision(
-      current,
-      'CANCEL_PENDING',
-      'FIRST_CANCELLATION_OBSERVATION',
-      { cancelledObservedCount: 1 },
+    return observedDecision(
+      decision(current, 'CANCEL_PENDING', 'FIRST_CANCELLATION_OBSERVATION', {
+        cancelledObservedCount: 1,
+      }),
+    );
+  }
+
+  if (
+    current.operationalStatus === 'CANCEL_PENDING' &&
+    current.cancelConfirmedAt !== null
+  ) {
+    return observedDecision(
+      decision(current, 'RECOVERED', 'RECOVERY_RETAINED', {
+        cancelledObservedCount: 0,
+      }),
     );
   }
 
   const wasPending =
     current.operationalStatus === 'CANCEL_PENDING' ||
     current.cancelledObservedCount > 0;
-  return decision(
-    current,
-    mapSourceStatus(sourceStatus),
-    wasPending ? 'CANCELLATION_SEQUENCE_RESET' : 'SOURCE_STATUS',
-    { cancelledObservedCount: 0 },
+  return observedDecision(
+    decision(
+      current,
+      mapSourceStatus(sourceStatus),
+      wasPending ? 'CANCELLATION_SEQUENCE_RESET' : 'SOURCE_STATUS',
+      { cancelledObservedCount: 0 },
+    ),
   );
 }

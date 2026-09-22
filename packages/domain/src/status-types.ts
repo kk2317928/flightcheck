@@ -18,6 +18,7 @@ export interface FlightStatusState {
   scheduleVarianceMinutes: number | null;
   cancelledObservedCount: number;
   cancelConfirmedAt: Date | null;
+  lastStatusObservedAt: Date | null;
 }
 
 export interface PerformanceDecision {
@@ -34,6 +35,7 @@ export type StatusReason =
   | 'CANCELLATION_SEQUENCE_RESET'
   | 'CANCELLATION_RECOVERED'
   | 'RECOVERY_RETAINED'
+  | 'OBSERVATION_REPLAY'
   | 'TERMINAL_ADVANCE'
   | 'TERMINAL_REGRESSION_BLOCKED';
 
@@ -41,5 +43,6 @@ export interface OperationalDecision {
   operationalStatus: OperationalStatus;
   cancelledObservedCount: number;
   cancelConfirmedAt: Date | null;
+  lastStatusObservedAt: Date;
   reason: StatusReason;
 }

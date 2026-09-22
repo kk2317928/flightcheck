@@ -69,5 +69,6 @@ describe('Prisma schema contract', () => {
     )?.[0];
 
     expect(instanceModel).toMatch(/scheduleVarianceMinutes\s+Int\?/);
+    expect(instanceModel).toMatch(/lastStatusObservedAt\s+DateTime\?/);
   });
 });

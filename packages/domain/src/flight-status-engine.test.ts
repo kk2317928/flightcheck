@@ -15,6 +15,7 @@ const current: FlightStatusState = {
   scheduleVarianceMinutes: null,
   cancelledObservedCount: 0,
   cancelConfirmedAt: null,
+  lastStatusObservedAt: null,
 };
 
 function flight(overrides: Partial<NormalizedFlight> = {}): NormalizedFlight {
@@ -73,12 +74,14 @@ describe('applyFlightStatusObservation', () => {
       expectedScheduleVarianceMinutes: null,
       expectedCancelledObservedCount: 0,
       expectedCancelConfirmedAt: null,
+      expectedLastStatusObservedAt: null,
       operationalStatus: 'CANCEL_PENDING',
       performanceStatus: 'DELAYED',
       delayMinutes: 20,
       scheduleVarianceMinutes: 20,
       cancelledObservedCount: 1,
       cancelConfirmedAt: null,
+      lastStatusObservedAt: observedAt,
       reason: 'FIRST_CANCELLATION_OBSERVATION',
       observedAt,
     });
@@ -91,6 +94,7 @@ describe('applyFlightStatusObservation', () => {
         scheduleVarianceMinutes: 20,
         cancelledObservedCount: 1,
         cancelConfirmedAt: null,
+        lastStatusObservedAt: observedAt,
         reason: 'FIRST_CANCELLATION_OBSERVATION',
       },
     });
@@ -123,6 +127,31 @@ describe('applyFlightStatusObservation', () => {
       delayMinutes: 0,
       scheduleVarianceMinutes: -5,
       reason: 'TERMINAL_REGRESSION_BLOCKED',
+    });
+  });
+
+  it('does not erase terminal performance with weaker timing evidence', async () => {
+    const writer: FlightStatusTransitionWriter = {
+      recordStatusTransition: vi.fn().mockResolvedValue({ changed: true }),
+    };
+    const result = await applyFlightStatusObservation(
+      input(writer, {
+        current: {
+          ...current,
+          operationalStatus: 'ARRIVED',
+          performanceStatus: 'DELAYED',
+          delayMinutes: 30,
+          scheduleVarianceMinutes: 30,
+        },
+        observation: flight({ sourceStatus: 'UNKNOWN' }),
+      }),
+    );
+
+    expect(result.decision).toMatchObject({
+      operationalStatus: 'ARRIVED',
+      performanceStatus: 'DELAYED',
+      delayMinutes: 30,
+      scheduleVarianceMinutes: 30,
     });
   });
 

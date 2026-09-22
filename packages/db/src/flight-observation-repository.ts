@@ -42,12 +42,14 @@ export interface RecordStatusTransitionInput {
   expectedScheduleVarianceMinutes: number | null;
   expectedCancelledObservedCount: number;
   expectedCancelConfirmedAt: Date | null;
+  expectedLastStatusObservedAt: Date | null;
   operationalStatus: OperationalStatus;
   performanceStatus: PerformanceStatus;
   delayMinutes: number | null;
   scheduleVarianceMinutes: number | null;
   cancelledObservedCount: number;
   cancelConfirmedAt: Date | null;
+  lastStatusObservedAt: Date;
   reason: string | null;
   observedAt: Date;
 }
@@ -192,18 +194,25 @@ export function createFlightObservationRepository(
             scheduleVarianceMinutes: true,
             cancelledObservedCount: true,
             cancelConfirmedAt: true,
+            lastStatusObservedAt: true,
           } as const;
           const current = await transaction.flightInstance.findUniqueOrThrow({
             where: { id: input.flightInstanceId },
             select: selectStatus,
           });
-          const currentIsTarget =
+          const currentPolicyIsTarget =
             current.operationalStatus === input.operationalStatus &&
             current.performanceStatus === input.performanceStatus &&
             current.delayMinutes === input.delayMinutes &&
             current.scheduleVarianceMinutes === input.scheduleVarianceMinutes &&
             current.cancelledObservedCount === input.cancelledObservedCount &&
             datesEqual(current.cancelConfirmedAt, input.cancelConfirmedAt);
+          const currentIsTarget =
+            currentPolicyIsTarget &&
+            datesEqual(
+              current.lastStatusObservedAt,
+              input.lastStatusObservedAt,
+            );
           const currentIsExpected =
             current.operationalStatus === input.expectedOperationalStatus &&
             current.performanceStatus === input.expectedPerformanceStatus &&
@@ -215,10 +224,32 @@ export function createFlightObservationRepository(
             datesEqual(
               current.cancelConfirmedAt,
               input.expectedCancelConfirmedAt,
+            ) &&
+            datesEqual(
+              current.lastStatusObservedAt,
+              input.expectedLastStatusObservedAt,
             );
 
           if (currentIsTarget) return { changed: false };
           if (!currentIsExpected) throw new Error('Stale status transition');
+
+          if (currentPolicyIsTarget) {
+            const watermarked = await transaction.flightInstance.updateMany({
+              where: {
+                id: input.flightInstanceId,
+                operationalStatus: input.expectedOperationalStatus,
+                performanceStatus: input.expectedPerformanceStatus,
+                delayMinutes: input.expectedDelayMinutes,
+                scheduleVarianceMinutes: input.expectedScheduleVarianceMinutes,
+                cancelledObservedCount: input.expectedCancelledObservedCount,
+                cancelConfirmedAt: input.expectedCancelConfirmedAt,
+                lastStatusObservedAt: input.expectedLastStatusObservedAt,
+              },
+              data: { lastStatusObservedAt: input.lastStatusObservedAt },
+            });
+            if (watermarked.count === 1) return { changed: false };
+            throw new Error('Stale status transition');
+          }
 
           const updated = await transaction.flightInstance.updateMany({
             where: {
@@ -229,6 +260,7 @@ export function createFlightObservationRepository(
               scheduleVarianceMinutes: input.expectedScheduleVarianceMinutes,
               cancelledObservedCount: input.expectedCancelledObservedCount,
               cancelConfirmedAt: input.expectedCancelConfirmedAt,
+              lastStatusObservedAt: input.expectedLastStatusObservedAt,
             },
             data: {
               operationalStatus: input.operationalStatus,
@@ -237,6 +269,7 @@ export function createFlightObservationRepository(
               scheduleVarianceMinutes: input.scheduleVarianceMinutes,
               cancelledObservedCount: input.cancelledObservedCount,
               cancelConfirmedAt: input.cancelConfirmedAt,
+              lastStatusObservedAt: input.lastStatusObservedAt,
             },
           });
 
@@ -252,7 +285,11 @@ export function createFlightObservationRepository(
               winner.scheduleVarianceMinutes ===
                 input.scheduleVarianceMinutes &&
               winner.cancelledObservedCount === input.cancelledObservedCount &&
-              datesEqual(winner.cancelConfirmedAt, input.cancelConfirmedAt)
+              datesEqual(winner.cancelConfirmedAt, input.cancelConfirmedAt) &&
+              datesEqual(
+                winner.lastStatusObservedAt,
+                input.lastStatusObservedAt,
+              )
             ) {
               return { changed: false };
             }
