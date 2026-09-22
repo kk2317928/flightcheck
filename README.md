@@ -8,7 +8,7 @@ P0 scope is frozen in [`docs/P0_v1.2.md`](docs/P0_v1.2.md). Implementation statu
 
 - Node.js 22 or newer
 - pnpm 11
-- PostgreSQL will be introduced in T-003; it is not required through T-002
+- PostgreSQL 16 or newer
 
 ## Setup
 
@@ -31,6 +31,15 @@ pnpm --filter @flightcheck/worker start
 ```
 
 It prints a structured `worker.ready` event with a job correlation ID and exits. Persistent scheduling starts in later Tasks.
+
+Initialize an empty PostgreSQL database with the committed migration and idempotent seed:
+
+```bash
+pnpm --filter @flightcheck/db db:migrate:deploy
+pnpm --filter @flightcheck/db db:seed
+```
+
+Rollback and destructive development rebuild procedures are documented in [`packages/db/README.md`](packages/db/README.md).
 
 ## Verification
 
@@ -55,6 +64,7 @@ pnpm test:e2e
 apps/web/       Next.js App Router public and Admin application
 apps/worker/    persistent Node.js worker foundation
 packages/shared validated configuration, Macau time and observability utilities
+packages/db     PostgreSQL schema, Prisma client, migrations and seed
 tests/e2e/      browser-level smoke and acceptance tests
 docs/           frozen specification, implementation plan and runbooks
 ```

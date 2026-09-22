@@ -1,0 +1,333 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum FlightDirection {
+  DEPARTURE
+  ARRIVAL
+}
+
+enum OperationalStatus {
+  SCHEDULED
+  DEPARTED
+  ARRIVED
+  CANCEL_PENDING
+  CANCELLED
+  RECOVERED
+  DIVERTED
+  UNKNOWN
+}
+
+enum PerformanceStatus {
+  PENDING
+  ON_TIME
+  DELAYED
+  SEVERE_DELAY
+  UNKNOWN
+}
+
+enum DataQuality {
+  COMPLETE
+  DEGRADED
+}
+
+enum SettlementStatus {
+  PRELIMINARY
+  FINAL
+  FINAL_WITH_WARNINGS
+}
+
+enum ScrapeSource {
+  DEPARTURES
+  ARRIVALS
+}
+
+enum ScrapeRunStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+enum SocialTemplateType {
+  CANCELLED
+  DAILY_SUMMARY
+}
+
+enum SocialEventType {
+  CANCELLED
+  DAILY_SUMMARY
+}
+
+enum SocialEventStatus {
+  PENDING
+  BLOCKED_DATA_QUALITY
+  PUBLISHING
+  COMPLETED
+  CANCELLED_BEFORE_PUBLISH
+  NEEDS_REVIEW
+  FAILED
+}
+
+enum SocialPlatform {
+  THREADS
+  FACEBOOK
+}
+
+enum SocialPostStatus {
+  PENDING
+  PUBLISHING
+  SUCCESS
+  FAILED
+  STUCK
+  NEEDS_REVIEW
+}
+
+model AdminUser {
+  id           String          @id @default(uuid()) @db.Uuid
+  email        String          @unique
+  passwordHash String
+  displayName  String?
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
+  sessions     AdminSession[]
+  auditLogs    AdminAuditLog[]
+}
+
+model AdminSession {
+  id        String    @id @default(uuid()) @db.Uuid
+  adminId   String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, expiresAt])
+}
+
+model AdminAuditLog {
+  id         String     @id @default(uuid()) @db.Uuid
+  adminId    String?    @db.Uuid
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime   @default(now()) @db.Timestamptz(3)
+  admin      AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId, createdAt])
+  @@index([targetType, targetId])
+}
+
+model Flight {
+  id           String           @id @default(uuid()) @db.Uuid
+  flightNumber String           @unique
+  airlineCode  String           @default("NX")
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
+  instances    FlightInstance[]
+}
+
+model FlightInstance {
+  id                     String                @id @default(uuid()) @db.Uuid
+  flightId               String                @db.Uuid
+  serviceDate            DateTime              @db.Date
+  direction              FlightDirection
+  scheduledAt            DateTime              @db.Timestamptz(3)
+  scheduledDepartureAt   DateTime?             @db.Timestamptz(3)
+  scheduledArrivalAt     DateTime?             @db.Timestamptz(3)
+  estimatedAt            DateTime?             @db.Timestamptz(3)
+  actualAt               DateTime?             @db.Timestamptz(3)
+  originCode             String?
+  destinationCode        String?
+  gate                   String?
+  operationalStatus      OperationalStatus     @default(SCHEDULED)
+  performanceStatus      PerformanceStatus     @default(PENDING)
+  delayMinutes           Int?
+  cancelledObservedCount Int                   @default(0)
+  cancelConfirmedAt      DateTime?             @db.Timestamptz(3)
+  lastObservedAt         DateTime?             @db.Timestamptz(3)
+  createdAt              DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime              @updatedAt @db.Timestamptz(3)
+  flight                 Flight                @relation(fields: [flightId], references: [id], onDelete: Restrict)
+  snapshots              FlightSnapshot[]
+  statusHistory          FlightStatusHistory[]
+  socialEvents           SocialEventFlight[]
+
+  @@unique([flightId, serviceDate, direction, scheduledAt], map: "flight_instance_identity_key")
+  @@index([serviceDate, direction])
+  @@index([operationalStatus, scheduledAt])
+}
+
+model FlightSnapshot {
+  id               String         @id @default(uuid()) @db.Uuid
+  flightInstanceId String         @db.Uuid
+  scrapeRunId      String?        @db.Uuid
+  payloadHash      String
+  payload          Json
+  observedAt       DateTime       @db.Timestamptz(3)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  flightInstance   FlightInstance @relation(fields: [flightInstanceId], references: [id], onDelete: Cascade)
+  scrapeRun        ScrapeRun?     @relation(fields: [scrapeRunId], references: [id], onDelete: SetNull)
+
+  @@unique([flightInstanceId, payloadHash], map: "flight_snapshot_hash_key")
+  @@index([observedAt])
+  @@index([scrapeRunId])
+}
+
+model FlightStatusHistory {
+  id                String            @id @default(uuid()) @db.Uuid
+  flightInstanceId  String            @db.Uuid
+  operationalStatus OperationalStatus
+  performanceStatus PerformanceStatus
+  delayMinutes      Int?
+  reason            String?
+  observedAt        DateTime          @db.Timestamptz(3)
+  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
+  flightInstance    FlightInstance    @relation(fields: [flightInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([flightInstanceId, observedAt])
+}
+
+model DailyStatistic {
+  id                   String           @id @default(uuid()) @db.Uuid
+  serviceDate          DateTime         @unique @db.Date
+  totalFlights         Int
+  departureFlights     Int
+  arrivalFlights       Int
+  determinedFlights    Int
+  pendingFlights       Int
+  onTimeFlights        Int
+  delayedFlights       Int
+  severeDelayedFlights Int
+  cancelledFlights     Int
+  unknownFlights       Int
+  cancellationRate     Decimal?         @db.Decimal(7, 4)
+  onTimeRate           Decimal?         @db.Decimal(7, 4)
+  averageDelayMinutes  Decimal?         @db.Decimal(10, 2)
+  dataQuality          DataQuality
+  settlementStatus     SettlementStatus @default(PRELIMINARY)
+  cutoffAt             DateTime         @db.Timestamptz(3)
+  settledAt            DateTime?        @db.Timestamptz(3)
+  warningSummary       Json?
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime         @updatedAt @db.Timestamptz(3)
+
+  @@index([settlementStatus, serviceDate])
+}
+
+model ScrapeRun {
+  id              String           @id @default(uuid()) @db.Uuid
+  source          ScrapeSource
+  status          ScrapeRunStatus  @default(RUNNING)
+  correlationId   String
+  startedAt       DateTime         @db.Timestamptz(3)
+  finishedAt      DateTime?        @db.Timestamptz(3)
+  fetchedAt       DateTime?        @db.Timestamptz(3)
+  sourceUpdatedAt DateTime?        @db.Timestamptz(3)
+  rowCount        Int              @default(0)
+  nxFlightCount   Int              @default(0)
+  warningCount    Int              @default(0)
+  warnings        Json?
+  errorCode       String?
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  snapshots       FlightSnapshot[]
+
+  @@index([source, startedAt])
+  @@index([status, startedAt])
+}
+
+model SocialTemplate {
+  id        String             @id @default(uuid()) @db.Uuid
+  type      SocialTemplateType
+  name      String
+  content   String
+  variables Json
+  isActive  Boolean            @default(true)
+  version   Int                @default(1)
+  createdAt DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime           @updatedAt @db.Timestamptz(3)
+  events    SocialEvent[]
+
+  @@unique([type, name, version])
+  @@index([type, isActive])
+}
+
+model SocialEvent {
+  id                 String              @id @default(uuid()) @db.Uuid
+  type               SocialEventType
+  status             SocialEventStatus   @default(PENDING)
+  idempotencyKey     String              @unique
+  templateId         String?             @db.Uuid
+  payload            Json
+  renderedContent    String
+  scheduledPublishAt DateTime            @db.Timestamptz(3)
+  claimedAt          DateTime?           @db.Timestamptz(3)
+  completedAt        DateTime?           @db.Timestamptz(3)
+  lastError          String?
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+  template           SocialTemplate?     @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  flights            SocialEventFlight[]
+  posts              SocialPost[]
+
+  @@index([status, scheduledPublishAt])
+  @@index([type, createdAt])
+}
+
+model SocialEventFlight {
+  socialEventId    String         @db.Uuid
+  flightInstanceId String         @db.Uuid
+  relationRole     String?
+  socialEvent      SocialEvent    @relation(fields: [socialEventId], references: [id], onDelete: Cascade)
+  flightInstance   FlightInstance @relation(fields: [flightInstanceId], references: [id], onDelete: Restrict)
+
+  @@id([socialEventId, flightInstanceId])
+  @@index([flightInstanceId])
+}
+
+model SocialPost {
+  id             String           @id @default(uuid()) @db.Uuid
+  socialEventId  String           @db.Uuid
+  platform       SocialPlatform
+  status         SocialPostStatus @default(PENDING)
+  attemptCount   Int              @default(0)
+  nextAttemptAt  DateTime?        @db.Timestamptz(3)
+  claimedAt      DateTime?        @db.Timestamptz(3)
+  externalPostId String?
+  externalUrl    String?
+  lastErrorCode  String?
+  lastError      String?
+  publishedAt    DateTime?        @db.Timestamptz(3)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(3)
+  socialEvent    SocialEvent      @relation(fields: [socialEventId], references: [id], onDelete: Cascade)
+
+  @@unique([socialEventId, platform], map: "social_post_event_platform_key")
+  @@index([status, nextAttemptAt])
+}
+
+model Setting {
+  key         String   @id
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model JobLock {
+  name        String   @id
+  ownerId     String
+  acquiredAt  DateTime @default(now()) @db.Timestamptz(3)
+  heartbeatAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt   DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+}
