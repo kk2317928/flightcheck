@@ -36,7 +36,25 @@ await flights.persistObservationBatch({
 
 The batch atomically upserts flights and flight instances, replaces warning metadata on the scrape run, and stores a snapshot only when the canonical material payload changes. Observation timestamps and scrape-run IDs do not affect the snapshot hash.
 
-Status policy remains outside this package. T-009 calculates operational/performance status and passes both the state it evaluated and its target state to `recordStatusTransition`. The repository writes history only when the persisted state actually changes, deduplicates a target that already won, and rejects stale decisions instead of overwriting a newer state.
+Status policy remains outside this package. `@flightcheck/domain` calculates
+operational/performance status and passes both the state it evaluated and its
+target state to `recordStatusTransition`. The policy records signed
+`scheduleVarianceMinutes`, while `delayMinutes` is clamped to zero for an early
+flight. Estimated times are classified immediately and an actual time replaces
+the estimate when it becomes available.
+
+Cancellation confirmation requires two consecutive explicit `CANCELLED`
+observations. A missing airport-board row never becomes an observation and must
+not call the status engine. The first cancellation becomes `CANCEL_PENDING`;
+the second becomes `CANCELLED` with `cancelConfirmedAt`. A later explicit
+non-cancelled observation becomes `RECOVERED`.
+
+The repository compare-and-set covers operational status, performance status,
+delay, schedule variance, cancellation observation count and confirmation time
+as one policy state. It writes history only when the persisted state actually
+changes, deduplicates a target that already won, and rejects any other stale
+decision instead of overwriting newer state. T-010 must reload current state
+and re-evaluate policy after a stale rejection.
 
 ## Roll back an application release
 

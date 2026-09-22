@@ -57,7 +57,20 @@ describe('initial PostgreSQL migration', () => {
         'previousOperationalStatus',
         'previousPerformanceStatus',
         'previousDelayMinutes',
+        'previousScheduleVarianceMinutes',
+        'scheduleVarianceMinutes',
       ]),
+    );
+  });
+
+  it('adds signed schedule variance to flight instances', async () => {
+    const result = await db.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'FlightInstance'`,
+    );
+
+    expect(result.rows.map(({ column_name }) => column_name)).toContain(
+      'scheduleVarianceMinutes',
     );
   });
 
