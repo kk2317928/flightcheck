@@ -6,7 +6,7 @@
 
 ## CP-01 — Project Foundation
 
-- [ ] T-001 Repository 與工程基線
+- [x] T-001 Repository 與工程基線
 - [ ] T-002 環境設定、時間與可觀測性基礎
 - [ ] T-003 PostgreSQL／Prisma 核心 Schema
 - [ ] T-004 Admin 身分驗證、Session 與 Audit
@@ -111,6 +111,7 @@ When marking a Task `[x]`, add its durable evidence to `CURRENT_STATE.md` using:
 
 ```markdown
 ### T-NNN — Task name
+
 - Commit: `<sha>`
 - Verification: `<command>` → `<result>`
 - Decisions: `<only durable architecture/domain decisions>`

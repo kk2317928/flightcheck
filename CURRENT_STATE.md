@@ -1,22 +1,26 @@
 # FlightCheck Current State
 
 > Updated: 2026-09-22  
-> Branch: `main`  
+> Branch: `feat/t-001-project-foundation`  
 > Baseline commit inspected: `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`
 
 ## Project Phase
 
-Planning complete; implementation has not started.
+CP-01 implementation is active. T-001 is complete and T-002 is next.
 
-The repository currently contains documentation only:
+The repository began with documentation only. It now contains:
 
 - `docs/P0_v1.2.md` — frozen P0 product specification.
 - `docs/IMPLEMENTATION_TASKS.md` — detailed T-001 through T-032 backlog and CP-01 through CP-06 gates.
 - `AGENTS.md` — persistent implementation and handoff rules.
 - `tasks.md` — task/checkpoint status ledger.
 - `CURRENT_STATE.md` — this handoff.
+- `apps/web` — Next.js App Router foundation and HTTP health endpoint.
+- `apps/worker` — Node.js Worker foundation and health contract.
+- Root pnpm/Turborepo, TypeScript, Tailwind, ESLint, Prettier, Vitest and Playwright tooling.
+- `.github/workflows/ci.yml` — install and full verification workflow.
 
-There is no application source, package manifest, database schema, migration, CI workflow or executable test suite yet. Any future session must not assume those artifacts already exist.
+Database schema and migrations do not exist yet; they begin in T-003.
 
 ## Scope Decisions Already Fixed
 
@@ -32,12 +36,13 @@ There is no application source, package manifest, database schema, migration, CI
 
 ## Completed Work
 
-| Item | Status | Evidence |
-|---|---|---|
-| P0 v1.2 scope specification | Complete | `docs/P0_v1.2.md`; commit `3d36fe66d7ab333c01accd208c59a5475f0c1171` |
-| Initial implementation backlog | Superseded by expanded backlog | commit `d87bc1446daad55b0aa0bc0a2bee4cc8bdae34b1` |
-| Expanded T-001–T-032 plan | Complete | `docs/IMPLEMENTATION_TASKS.md`; commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617` |
-| Persistent context/checkpoint files | Complete | `AGENTS.md`, `CURRENT_STATE.md`, `tasks.md` |
+| Item                                | Status                         | Evidence                                                                          |
+| ----------------------------------- | ------------------------------ | --------------------------------------------------------------------------------- |
+| P0 v1.2 scope specification         | Complete                       | `docs/P0_v1.2.md`; commit `3d36fe66d7ab333c01accd208c59a5475f0c1171`              |
+| Initial implementation backlog      | Superseded by expanded backlog | commit `d87bc1446daad55b0aa0bc0a2bee4cc8bdae34b1`                                 |
+| Expanded T-001–T-032 plan           | Complete                       | `docs/IMPLEMENTATION_TASKS.md`; commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617` |
+| Persistent context/checkpoint files | Complete                       | `AGENTS.md`, `CURRENT_STATE.md`, `tasks.md`                                       |
+| T-001 engineering baseline          | Complete                       | Web/Worker workspace, health tests, CI and full verification in this Task commit  |
 
 ## Active Checkpoint
 
@@ -45,15 +50,17 @@ There is no application source, package manifest, database schema, migration, CI
 
 ## Active Task
 
-None. The next Task is `T-001 — Repository 與工程基線`.
+None. The next Task is `T-002 — 環境設定、時間與可觀測性基礎`.
 
-T-001 must create the pnpm workspace, Next.js Web app, Worker package, TypeScript/Tailwind/tooling, health checks, environment example, README and the first runnable verification suite. Follow the exact acceptance and commit contract in `docs/IMPLEMENTATION_TASKS.md`.
+T-002 must add Zod environment validation, UTC/Asia-Macau time helpers, structured logging, correlation IDs and secret redaction. Do not introduce Prisma models before T-003.
 
 ## Verification Baseline
 
-- Repository tree inspected recursively at commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`.
-- Only the two documentation files existed before this context commit.
-- No build, lint, typecheck or test command exists yet; establishing them is part of T-001.
+- `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
+- `pnpm verify` passes: formatting, ESLint, TypeScript, 2 Vitest health tests and production builds for Web and Worker.
+- Next.js production build exposes `/`, `/_not-found` and `/api/health`; Worker compiles to `dist/`.
+- The standalone production server returned `{"service":"web","status":"ok"}` from `/api/health`; the built Worker returned `{"service":"worker","status":"ok"}`.
+- Playwright configuration and a browser smoke test exist. Chromium could not be downloaded in this managed environment because the endpoint returned a zero-byte archive; run `pnpm exec playwright install chromium && pnpm test:e2e` on CI or a normal development host.
 
 ## Known Risks
 
@@ -63,8 +70,8 @@ T-001 must create the pnpm workspace, Next.js Web app, Worker package, TypeScrip
 
 ## Next Exact Action
 
-Create an isolated implementation branch/worktree for T-001, mark T-001 `[-]` in `tasks.md`, scaffold the documented workspace, verify all T-001 commands, update this file with results and commit using:
+Start T-002 after T-001 review, mark T-002 `[-]` in `tasks.md`, implement it test-first, update this file with evidence and commit using:
 
 ```text
-chore: bootstrap flightcheck workspace
+feat: add validated configuration and time utilities
 ```
