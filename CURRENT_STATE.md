@@ -1,12 +1,12 @@
 # FlightCheck Current State
 
 > Updated: 2026-09-22  
-> Branch: `feat/t-005-flight-source-contract`  
+> Branch: `feat/t-006-macau-airport-client`  
 > Baseline commit inspected: `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`
 
 ## Project Phase
 
-CP-02 implementation is active. T-001 through T-005 are verified.
+CP-02 implementation is active. T-001 through T-006 are verified.
 
 The repository began with documentation only. It now contains:
 
@@ -19,7 +19,7 @@ The repository began with documentation only. It now contains:
 - `apps/worker` — Node.js Worker foundation and health contract.
 - `packages/shared` — validated environment, Macau time, correlation ID and structured logging utilities.
 - `packages/db` — Prisma 7 schema, generated-client factory, initial PostgreSQL migration and idempotent seed.
-- `packages/flight-source` — parser-independent airport source contracts, normalized flight types and runtime validation.
+- `packages/flight-source` — parser-independent airport source contracts, normalized flight types, Macau Airport HTTP client and sanitized source fixtures.
 - Admin authentication — Argon2id passwords, database-backed sessions, hardened cookies, rate limiting, route protection and audit logs.
 - Root pnpm/Turborepo, TypeScript, Tailwind, ESLint, Prettier, Vitest and Playwright tooling.
 - `.github/workflows/ci.yml` — install and full verification workflow.
@@ -38,17 +38,18 @@ The repository began with documentation only. It now contains:
 
 ## Completed Work
 
-| Item                                | Status                         | Evidence                                                                          |
-| ----------------------------------- | ------------------------------ | --------------------------------------------------------------------------------- |
-| P0 v1.2 scope specification         | Complete                       | `docs/P0_v1.2.md`; commit `3d36fe66d7ab333c01accd208c59a5475f0c1171`              |
-| Initial implementation backlog      | Superseded by expanded backlog | commit `d87bc1446daad55b0aa0bc0a2bee4cc8bdae34b1`                                 |
-| Expanded T-001–T-032 plan           | Complete                       | `docs/IMPLEMENTATION_TASKS.md`; commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617` |
-| Persistent context/checkpoint files | Complete                       | `AGENTS.md`, `CURRENT_STATE.md`, `tasks.md`                                       |
-| T-001 engineering baseline          | Complete                       | Web/Worker workspace, health tests, CI and full verification in this Task commit  |
-| T-002 config and observability      | Complete                       | Zod env validation, Macau time helpers, correlation IDs and redacted JSON logging |
-| T-003 PostgreSQL／Prisma schema     | Complete                       | 15 P0 models, initial migration, constraints, client factory and idempotent seed  |
-| T-004 Admin authentication          | Complete                       | Argon2id, hashed sessions, hardened cookies, rate limit, proxy guard and audit    |
-| T-005 Flight source contracts       | Complete                       | Adapter, raw/normalized schemas, warnings and discriminated fetch results         |
+| Item                                | Status                         | Evidence                                                                            |
+| ----------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| P0 v1.2 scope specification         | Complete                       | `docs/P0_v1.2.md`; commit `3d36fe66d7ab333c01accd208c59a5475f0c1171`                |
+| Initial implementation backlog      | Superseded by expanded backlog | commit `d87bc1446daad55b0aa0bc0a2bee4cc8bdae34b1`                                   |
+| Expanded T-001–T-032 plan           | Complete                       | `docs/IMPLEMENTATION_TASKS.md`; commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`   |
+| Persistent context/checkpoint files | Complete                       | `AGENTS.md`, `CURRENT_STATE.md`, `tasks.md`                                         |
+| T-001 engineering baseline          | Complete                       | Web/Worker workspace, health tests, CI and full verification in this Task commit    |
+| T-002 config and observability      | Complete                       | Zod env validation, Macau time helpers, correlation IDs and redacted JSON logging   |
+| T-003 PostgreSQL／Prisma schema     | Complete                       | 15 P0 models, initial migration, constraints, client factory and idempotent seed    |
+| T-004 Admin authentication          | Complete                       | Argon2id, hashed sessions, hardened cookies, rate limit, proxy guard and audit      |
+| T-005 Flight source contracts       | Complete                       | Adapter, raw/normalized schemas, warnings and discriminated fetch results           |
+| T-006 Macau Airport HTTP client     | Complete                       | Official board URLs, timeout/retry policy, source timestamps and sanitized fixtures |
 
 ## Active Checkpoint
 
@@ -56,7 +57,7 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-005 — Flight Source Contract 與 NormalizedFlight` is complete.
+`T-006 — MacauAirport HTTP Client 與 Parser Fixtures` is complete.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -64,10 +65,12 @@ The bootstrap command `pnpm --filter @flightcheck/web admin:create` requires `AD
 
 T-005 introduced `@flightcheck/flight-source` as the only contract boundary for airport data. `RawAirportFlight` preserves source text for the future parser; `NormalizedFlight` exposes UTC instants plus the Macau-local service date. `FlightSourceFetchResult` is a runtime-validated discriminated union for COMPLETE, PARTIAL and FAILED observations. Failed observations cannot contain flights, preventing timeout, HTTP failure or malformed source data from being treated as an empty flight board. Flight numbers remain strings and accept suffixes such as `NX862D`. No HTML parser dependency is present in the contract package.
 
+T-006 added a native-fetch HTTP client for the official Macau Airport Departures and Arrivals pages. Each attempt has a 10-second timeout and at most three attempts with exponential delay; HTTP 408, 429, 5xx, timeout and network failures are retryable, while ordinary 4xx and malformed boards are not. The client fetches both directions concurrently, validates direction-specific board markers after redirects, preserves a successful direction as PARTIAL when the other fails, and returns FAILED with no documents when none succeed. `fetchedAt` records receipt time and a strictly valid Macau-local update label is converted to a UTC `sourceUpdatedAt`. Sanitized, structurally representative fixtures retain desktop/mobile rows without remote assets or request metadata. Flight-row parsing remains deferred to T-007.
+
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- `pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 61 Vitest tests and production builds for DB, Flight Source, Shared, Web and Worker.
+- `pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 71 Vitest tests and production builds for DB, Flight Source, Shared, Web and Worker.
 - DB integration tests apply the initial migration to an empty embedded PostgreSQL instance, enforce event/post uniqueness, and run the Prisma seed twice without duplicates.
 - Next.js production build exposes the public routes, protected `/admin`, login UI and three Admin auth endpoints; its database-backed proxy compiles successfully. Worker compiles to `dist/`.
 - The auth integration test uses embedded PostgreSQL to prove login, audit creation, session authentication, logout revocation and prevention of token reuse. Unit/route tests cover Argon2id, cookie flags, throttling and unauthorized page/API handling.
@@ -76,14 +79,14 @@ T-005 introduced `@flightcheck/flight-source` as the only contract boundary for 
 
 ## Known Risks
 
-- The live Macau Airport HTML structure has not been captured or tested. Address this in T-006 with saved fixtures; do not mix the investigation into T-001.
+- Macau Airport may change its public HTML structure. The client rejects pages without the board marker, while T-007 must keep parser behavior pinned to the sanitized fixtures and surface malformed rows as warnings.
 - Threads/Facebook credentials and production authorization are not yet validated. They are not required before T-017/T-018.
 - Exact production VPS details are intentionally deferred to T-031.
 
 ## Next Exact Action
 
-Start T-006 from the completed T-005 commit. Implement the Macau Airport Departures/Arrivals HTTP client, bounded timeout/retries and de-identified HTML fixtures without adding Playwright.
+Start T-007 from the completed T-006 commit. Implement the fixture-driven parser, NX-only filtering, airport dictionary, status/time/date normalization and deduplication without moving HTML concerns into domain or worker code.
 
 ```text
-feat(source): add macau airport client and fixtures
+feat(source): normalize macau airport flights
 ```

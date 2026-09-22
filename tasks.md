@@ -21,7 +21,7 @@ Checkpoint gate:
 ## CP-02 — Flight Acquisition & Status
 
 - [x] T-005 Flight Source Contract 與 NormalizedFlight
-- [ ] T-006 MacauAirport HTTP Client 與 Parser Fixtures
+- [x] T-006 MacauAirport HTTP Client 與 Parser Fixtures
 - [ ] T-007 Parser、機場詞典與狀態正規化
 - [ ] T-008 Flight Persistence 與變更歷史
 - [ ] T-009 Status Engine
