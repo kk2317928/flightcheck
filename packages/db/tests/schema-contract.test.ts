@@ -58,5 +58,17 @@ describe('Prisma schema contract', () => {
       /previousPerformanceStatus\s+PerformanceStatus\?/,
     );
     expect(historyModel).toMatch(/previousDelayMinutes\s+Int\?/);
+    expect(historyModel).toMatch(/previousScheduleVarianceMinutes\s+Int\?/);
+    expect(historyModel).toMatch(/scheduleVarianceMinutes\s+Int\?/);
+  });
+
+  it('stores signed schedule variance on each flight instance', () => {
+    const schema = readFileSync(schemaPath, 'utf8');
+    const instanceModel = schema.match(
+      /model FlightInstance \{[\s\S]*?\n\}/,
+    )?.[0];
+
+    expect(instanceModel).toMatch(/scheduleVarianceMinutes\s+Int\?/);
+    expect(instanceModel).toMatch(/lastStatusObservedAt\s+DateTime\?/);
   });
 });

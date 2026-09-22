@@ -39,9 +39,17 @@ export interface RecordStatusTransitionInput {
   expectedOperationalStatus: OperationalStatus;
   expectedPerformanceStatus: PerformanceStatus;
   expectedDelayMinutes: number | null;
+  expectedScheduleVarianceMinutes: number | null;
+  expectedCancelledObservedCount: number;
+  expectedCancelConfirmedAt: Date | null;
+  expectedLastStatusObservedAt: Date | null;
   operationalStatus: OperationalStatus;
   performanceStatus: PerformanceStatus;
   delayMinutes: number | null;
+  scheduleVarianceMinutes: number | null;
+  cancelledObservedCount: number;
+  cancelConfirmedAt: Date | null;
+  lastStatusObservedAt: Date;
   reason: string | null;
   observedAt: Date;
 }
@@ -69,6 +77,12 @@ export class FlightPersistenceError extends Error {
 
 function serviceDateToUtc(serviceDate: string): Date {
   return new Date(`${serviceDate}T00:00:00.000Z`);
+}
+
+function datesEqual(left: Date | null, right: Date | null): boolean {
+  return left === null
+    ? right === null
+    : right !== null && left.getTime() === right.getTime();
 }
 
 export function createFlightObservationRepository(
@@ -177,22 +191,84 @@ export function createFlightObservationRepository(
             operationalStatus: true,
             performanceStatus: true,
             delayMinutes: true,
+            scheduleVarianceMinutes: true,
+            cancelledObservedCount: true,
+            cancelConfirmedAt: true,
+            lastStatusObservedAt: true,
           } as const;
           const current = await transaction.flightInstance.findUniqueOrThrow({
             where: { id: input.flightInstanceId },
             select: selectStatus,
           });
-          const currentIsTarget =
+          const currentPolicyIsTarget =
             current.operationalStatus === input.operationalStatus &&
             current.performanceStatus === input.performanceStatus &&
-            current.delayMinutes === input.delayMinutes;
+            current.delayMinutes === input.delayMinutes &&
+            current.scheduleVarianceMinutes === input.scheduleVarianceMinutes &&
+            current.cancelledObservedCount === input.cancelledObservedCount &&
+            datesEqual(current.cancelConfirmedAt, input.cancelConfirmedAt);
+          const currentIsTarget =
+            currentPolicyIsTarget &&
+            datesEqual(
+              current.lastStatusObservedAt,
+              input.lastStatusObservedAt,
+            );
           const currentIsExpected =
             current.operationalStatus === input.expectedOperationalStatus &&
             current.performanceStatus === input.expectedPerformanceStatus &&
-            current.delayMinutes === input.expectedDelayMinutes;
+            current.delayMinutes === input.expectedDelayMinutes &&
+            current.scheduleVarianceMinutes ===
+              input.expectedScheduleVarianceMinutes &&
+            current.cancelledObservedCount ===
+              input.expectedCancelledObservedCount &&
+            datesEqual(
+              current.cancelConfirmedAt,
+              input.expectedCancelConfirmedAt,
+            ) &&
+            datesEqual(
+              current.lastStatusObservedAt,
+              input.expectedLastStatusObservedAt,
+            );
 
           if (currentIsTarget) return { changed: false };
           if (!currentIsExpected) throw new Error('Stale status transition');
+
+          if (currentPolicyIsTarget) {
+            const watermarked = await transaction.flightInstance.updateMany({
+              where: {
+                id: input.flightInstanceId,
+                operationalStatus: input.expectedOperationalStatus,
+                performanceStatus: input.expectedPerformanceStatus,
+                delayMinutes: input.expectedDelayMinutes,
+                scheduleVarianceMinutes: input.expectedScheduleVarianceMinutes,
+                cancelledObservedCount: input.expectedCancelledObservedCount,
+                cancelConfirmedAt: input.expectedCancelConfirmedAt,
+                lastStatusObservedAt: input.expectedLastStatusObservedAt,
+              },
+              data: { lastStatusObservedAt: input.lastStatusObservedAt },
+            });
+            if (watermarked.count === 1) return { changed: false };
+            const winner = await transaction.flightInstance.findUniqueOrThrow({
+              where: { id: input.flightInstanceId },
+              select: selectStatus,
+            });
+            if (
+              winner.operationalStatus === input.operationalStatus &&
+              winner.performanceStatus === input.performanceStatus &&
+              winner.delayMinutes === input.delayMinutes &&
+              winner.scheduleVarianceMinutes ===
+                input.scheduleVarianceMinutes &&
+              winner.cancelledObservedCount === input.cancelledObservedCount &&
+              datesEqual(winner.cancelConfirmedAt, input.cancelConfirmedAt) &&
+              datesEqual(
+                winner.lastStatusObservedAt,
+                input.lastStatusObservedAt,
+              )
+            ) {
+              return { changed: false };
+            }
+            throw new Error('Stale status transition');
+          }
 
           const updated = await transaction.flightInstance.updateMany({
             where: {
@@ -200,11 +276,19 @@ export function createFlightObservationRepository(
               operationalStatus: input.expectedOperationalStatus,
               performanceStatus: input.expectedPerformanceStatus,
               delayMinutes: input.expectedDelayMinutes,
+              scheduleVarianceMinutes: input.expectedScheduleVarianceMinutes,
+              cancelledObservedCount: input.expectedCancelledObservedCount,
+              cancelConfirmedAt: input.expectedCancelConfirmedAt,
+              lastStatusObservedAt: input.expectedLastStatusObservedAt,
             },
             data: {
               operationalStatus: input.operationalStatus,
               performanceStatus: input.performanceStatus,
               delayMinutes: input.delayMinutes,
+              scheduleVarianceMinutes: input.scheduleVarianceMinutes,
+              cancelledObservedCount: input.cancelledObservedCount,
+              cancelConfirmedAt: input.cancelConfirmedAt,
+              lastStatusObservedAt: input.lastStatusObservedAt,
             },
           });
 
@@ -216,7 +300,15 @@ export function createFlightObservationRepository(
             if (
               winner.operationalStatus === input.operationalStatus &&
               winner.performanceStatus === input.performanceStatus &&
-              winner.delayMinutes === input.delayMinutes
+              winner.delayMinutes === input.delayMinutes &&
+              winner.scheduleVarianceMinutes ===
+                input.scheduleVarianceMinutes &&
+              winner.cancelledObservedCount === input.cancelledObservedCount &&
+              datesEqual(winner.cancelConfirmedAt, input.cancelConfirmedAt) &&
+              datesEqual(
+                winner.lastStatusObservedAt,
+                input.lastStatusObservedAt,
+              )
             ) {
               return { changed: false };
             }
@@ -229,9 +321,12 @@ export function createFlightObservationRepository(
               previousOperationalStatus: input.expectedOperationalStatus,
               previousPerformanceStatus: input.expectedPerformanceStatus,
               previousDelayMinutes: input.expectedDelayMinutes,
+              previousScheduleVarianceMinutes:
+                input.expectedScheduleVarianceMinutes,
               operationalStatus: input.operationalStatus,
               performanceStatus: input.performanceStatus,
               delayMinutes: input.delayMinutes,
+              scheduleVarianceMinutes: input.scheduleVarianceMinutes,
               reason: input.reason,
               observedAt: input.observedAt,
             },

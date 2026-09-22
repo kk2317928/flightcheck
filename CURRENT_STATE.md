@@ -1,12 +1,12 @@
 # FlightCheck Current State
 
 > Updated: 2026-09-22  
-> Branch: `feat/t-008-flight-persistence`  
+> Branch: `feat/t-009-status-engine`  
 > Baseline commit inspected: `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`
 
 ## Project Phase
 
-CP-02 implementation is active. T-001 through T-008 are verified.
+CP-02 implementation is active. T-001 through T-009 are verified; T-010 is next.
 
 The repository began with documentation only. It now contains:
 
@@ -19,6 +19,7 @@ The repository began with documentation only. It now contains:
 - `apps/worker` — Node.js Worker foundation and health contract.
 - `packages/shared` — validated environment, Macau time, correlation ID and structured logging utilities.
 - `packages/db` — Prisma 7 schema, generated-client factory, initial PostgreSQL migration and idempotent seed.
+- `packages/domain` — pure operational/performance status policy and atomic transition service.
 - `packages/flight-source` — airport source contracts, Macau Airport HTTP client, fixture-driven parser, IATA dictionary, normalization adapter and sanitized source fixtures.
 - Admin authentication — Argon2id passwords, database-backed sessions, hardened cookies, rate limiting, route protection and audit logs.
 - Root pnpm/Turborepo, TypeScript, Tailwind, ESLint, Prettier, Vitest and Playwright tooling.
@@ -52,6 +53,7 @@ The repository began with documentation only. It now contains:
 | T-006 Macau Airport HTTP client     | Complete                       | Official board URLs, timeout/retry policy, source timestamps and sanitized fixtures |
 | T-007 Macau Airport parser          | Complete                       | NX filtering, IATA/status/time normalization, warnings, deduplication and adapter   |
 | T-008 Flight persistence            | Complete                       | Atomic upserts, changed-only snapshots, warning storage and guarded status history  |
+| T-009 Status engine                 | Complete                       | Pure status policy, cancellation confirmation, terminal protection and full CAS     |
 
 ## Active Checkpoint
 
@@ -59,7 +61,7 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-008 — Flight Persistence 與變更歷史` is complete. The next Task is `T-009 — Status Engine`.
+`T-009 — Status Engine` is complete. `T-010 — Flight Sync Use Case 與 Worker` is next and must load the current policy state, apply each explicit normalized observation through the domain engine, and retry or surface stale compare-and-set decisions without treating a missing row as a status observation.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -73,10 +75,12 @@ T-007 added a Cheerio parser behind `MacauAirportFlightSource`. It reads only to
 
 T-008 added `FlightObservationRepository` to `@flightcheck/db`. Each normalized batch validates the source contract and atomically upserts flights/instances, replaces `ScrapeRun` warnings and writes only material snapshots. Canonical SHA-256 payloads exclude observation/run metadata, while database `ON CONFLICT` and unique constraints make new-flight and snapshot discovery replay-safe. Arrival and departure remain distinct through the existing natural key. Status persistence requires the T-009 caller's expected state, conditionally writes the target, records previous/new values, deduplicates an identical winner and rejects stale policy decisions. Migration `20260922000200_status_history_previous_values` adds nullable previous-state columns. Turbo now orders each package test after its own build to prevent concurrent Prisma generation.
 
+T-009 added the Prisma-free `@flightcheck/domain` package. Performance classification uses `actualAt` before `estimatedAt`, preserves signed whole-minute schedule variance, exposes non-negative delay, and applies the 15/60-minute thresholds immediately. Operational policy requires two consecutive explicit cancellation observations, resets an interrupted sequence, retains the first cancellation-confirmation timestamp through replay and recovery, and blocks terminal regressions while allowing `DEPARTED` to advance to `ARRIVED`. Replayed or out-of-order observation timestamps cannot advance cancellation, interrupted recancellation restores `RECOVERED`, and weaker timing evidence cannot erase terminal performance. The combined service produces one complete transition and delegates a single writer call. Migrations `20260922000300_status_engine_policy_fields` and `20260922000400_status_observation_watermark` store variance, cancellation policy fields and the processing watermark; the DB repository compares every policy field atomically and records previous/new variance in status history. T-010 owns current-state loading and stale-decision retry orchestration.
+
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- `TURBO_FORCE=true pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 110 Vitest tests and production builds for DB, Flight Source, Shared, Web and Worker.
+- `TURBO_FORCE=true pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 162 Vitest tests and production builds for DB, Domain, Flight Source, Shared, Web and Worker.
 - DB integration tests apply every migration in order to an empty embedded PostgreSQL instance, enforce event/post and snapshot uniqueness, verify conflict-safe SQL/status CAS behavior, and run the Prisma seed twice without duplicates.
 - Next.js production build exposes the public routes, protected `/admin`, login UI and three Admin auth endpoints; its database-backed proxy compiles successfully. Worker compiles to `dist/`.
 - The auth integration test uses embedded PostgreSQL to prove login, audit creation, session authentication, logout revocation and prevention of token reuse. Unit/route tests cover Argon2id, cookie flags, throttling and unauthorized page/API handling.
@@ -93,8 +97,8 @@ T-008 added `FlightObservationRepository` to `@flightcheck/db`. Each normalized 
 
 ## Next Exact Action
 
-Start T-009 Status Engine using `recordStatusTransition` expected-state semantics. Implement operational/performance rules, including two consecutive explicit cancellation observations and recovery, without moving policy into the persistence repository.
+Begin T-010 from `docs/IMPLEMENTATION_TASKS.md`: implement the Flight Sync use case and Worker integration on a new focused branch, preserving the T-009 missing-row boundary and full-field compare-and-set contract.
 
 ```text
-feat(status): implement operational and performance rules
+feat(domain): implement flight status engine
 ```

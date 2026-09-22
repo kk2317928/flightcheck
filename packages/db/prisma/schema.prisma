@@ -137,30 +137,32 @@ model Flight {
 }
 
 model FlightInstance {
-  id                     String                @id @default(uuid()) @db.Uuid
-  flightId               String                @db.Uuid
-  serviceDate            DateTime              @db.Date
-  direction              FlightDirection
-  scheduledAt            DateTime              @db.Timestamptz(3)
-  scheduledDepartureAt   DateTime?             @db.Timestamptz(3)
-  scheduledArrivalAt     DateTime?             @db.Timestamptz(3)
-  estimatedAt            DateTime?             @db.Timestamptz(3)
-  actualAt               DateTime?             @db.Timestamptz(3)
-  originCode             String?
-  destinationCode        String?
-  gate                   String?
-  operationalStatus      OperationalStatus     @default(SCHEDULED)
-  performanceStatus      PerformanceStatus     @default(PENDING)
-  delayMinutes           Int?
-  cancelledObservedCount Int                   @default(0)
-  cancelConfirmedAt      DateTime?             @db.Timestamptz(3)
-  lastObservedAt         DateTime?             @db.Timestamptz(3)
-  createdAt              DateTime              @default(now()) @db.Timestamptz(3)
-  updatedAt              DateTime              @updatedAt @db.Timestamptz(3)
-  flight                 Flight                @relation(fields: [flightId], references: [id], onDelete: Restrict)
-  snapshots              FlightSnapshot[]
-  statusHistory          FlightStatusHistory[]
-  socialEvents           SocialEventFlight[]
+  id                      String                @id @default(uuid()) @db.Uuid
+  flightId                String                @db.Uuid
+  serviceDate             DateTime              @db.Date
+  direction               FlightDirection
+  scheduledAt             DateTime              @db.Timestamptz(3)
+  scheduledDepartureAt    DateTime?             @db.Timestamptz(3)
+  scheduledArrivalAt      DateTime?             @db.Timestamptz(3)
+  estimatedAt             DateTime?             @db.Timestamptz(3)
+  actualAt                DateTime?             @db.Timestamptz(3)
+  originCode              String?
+  destinationCode         String?
+  gate                    String?
+  operationalStatus       OperationalStatus     @default(SCHEDULED)
+  performanceStatus       PerformanceStatus     @default(PENDING)
+  delayMinutes            Int?
+  scheduleVarianceMinutes Int?
+  cancelledObservedCount  Int                   @default(0)
+  cancelConfirmedAt       DateTime?             @db.Timestamptz(3)
+  lastStatusObservedAt    DateTime?             @db.Timestamptz(3)
+  lastObservedAt          DateTime?             @db.Timestamptz(3)
+  createdAt               DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime              @updatedAt @db.Timestamptz(3)
+  flight                  Flight                @relation(fields: [flightId], references: [id], onDelete: Restrict)
+  snapshots               FlightSnapshot[]
+  statusHistory           FlightStatusHistory[]
+  socialEvents            SocialEventFlight[]
 
   @@unique([flightId, serviceDate, direction, scheduledAt], map: "flight_instance_identity_key")
   @@index([serviceDate, direction])
@@ -184,18 +186,20 @@ model FlightSnapshot {
 }
 
 model FlightStatusHistory {
-  id                        String             @id @default(uuid()) @db.Uuid
-  flightInstanceId          String             @db.Uuid
-  previousOperationalStatus OperationalStatus?
-  previousPerformanceStatus PerformanceStatus?
-  previousDelayMinutes      Int?
-  operationalStatus         OperationalStatus
-  performanceStatus         PerformanceStatus
-  delayMinutes              Int?
-  reason                    String?
-  observedAt                DateTime           @db.Timestamptz(3)
-  createdAt                 DateTime           @default(now()) @db.Timestamptz(3)
-  flightInstance            FlightInstance     @relation(fields: [flightInstanceId], references: [id], onDelete: Cascade)
+  id                              String             @id @default(uuid()) @db.Uuid
+  flightInstanceId                String             @db.Uuid
+  previousOperationalStatus       OperationalStatus?
+  previousPerformanceStatus       PerformanceStatus?
+  previousDelayMinutes            Int?
+  previousScheduleVarianceMinutes Int?
+  operationalStatus               OperationalStatus
+  performanceStatus               PerformanceStatus
+  delayMinutes                    Int?
+  scheduleVarianceMinutes         Int?
+  reason                          String?
+  observedAt                      DateTime           @db.Timestamptz(3)
+  createdAt                       DateTime           @default(now()) @db.Timestamptz(3)
+  flightInstance                  FlightInstance     @relation(fields: [flightInstanceId], references: [id], onDelete: Cascade)
 
   @@index([flightInstanceId, observedAt])
 }
