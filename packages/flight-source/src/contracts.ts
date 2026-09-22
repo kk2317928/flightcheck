@@ -71,6 +71,7 @@ const fetchMetadataSchema = z.object({
   fetchedAt: z.date(),
   sourceUpdatedAt: z.date().nullable(),
   warnings: z.array(FlightSourceWarningSchema),
+  rowCount: z.number().int().nonnegative(),
 });
 
 const usableResultSchema = fetchMetadataSchema.extend({

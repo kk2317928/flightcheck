@@ -107,6 +107,20 @@ export function createFlightSyncService(
   const applyStatusObservation =
     dependencies.applyStatusObservation ?? applyDomainStatusObservation;
 
+  async function renewLease(ownerId: string): Promise<void> {
+    const renewed = await dependencies.lock.renew({
+      name: LOCK_NAME,
+      ownerId,
+      now: dependencies.now(),
+      leaseMs: LEASE_MS,
+    });
+    if (!renewed)
+      throw new DirectionSyncError(
+        'LOCK_LOST',
+        new Error('Lease ownership lost'),
+      );
+  }
+
   async function applyStatus(
     flightInstanceId: string,
     observation: ApplyFlightStatusObservationInput['observation'],
@@ -184,7 +198,7 @@ export function createFlightSyncService(
       fetchedAt = sourceResult.fetchedAt;
       sourceUpdatedAt = sourceResult.sourceUpdatedAt;
       warnings = sourceResult.warnings;
-      rowCount = sourceResult.flights.length;
+      rowCount = sourceResult.rowCount;
 
       if (sourceResult.status === 'FAILED') {
         await dependencies.syncRepository.completeScrapeRun({
@@ -209,6 +223,8 @@ export function createFlightSyncService(
         };
       }
 
+      await renewLease(correlationId);
+
       const persisted =
         await dependencies.observationRepository.persistObservationBatch({
           scrapeRunId,
@@ -218,6 +234,7 @@ export function createFlightSyncService(
         });
       processedFlights = persisted.processedInstances;
       for (const instance of persisted.instances) {
+        await renewLease(correlationId);
         await applyStatus(
           instance.flightInstanceId,
           instance.observation,
@@ -289,10 +306,21 @@ export function createFlightSyncService(
       }
 
       try {
-        const directions = await Promise.all(
+        const settled = await Promise.allSettled(
           DIRECTIONS.map((configuration) =>
             runDirection(configuration, input, correlationId),
           ),
+        );
+        const directions = settled.map((result, index): DirectionSyncResult =>
+          result.status === 'fulfilled'
+            ? result.value
+            : {
+                direction: DIRECTIONS[index]!.direction,
+                scrapeRunId: '',
+                status: 'FAILED',
+                processedFlights: 0,
+                errorCode: 'DIRECTION_FINALIZATION_FAILED',
+              },
         );
         return {
           status: overallStatus(directions),

@@ -62,7 +62,9 @@ re-evaluate policy after a stale rejection.
 
 `createJobLockRepository` atomically acquires the global `flight-sync` lease,
 replacing it only after expiry. Renewal and release require the same `name` and
-`ownerId`, so an expired owner cannot modify a successor's lease.
+`ownerId`, so an expired owner cannot modify a successor's lease. The Worker
+renews ownership at safe persistence/status boundaries and stops a direction if
+renewal reports that ownership was lost.
 
 `createFlightSyncRepository` creates one RUNNING `ScrapeRun` for departures and
 one for arrivals, completes each exactly once, and loads the complete current
@@ -70,6 +72,8 @@ status-policy state. Runs finish as `SUCCESS`, `PARTIAL`, or `FAILED` with sourc
 timestamps, counts, warnings, and a stable error code. Observation persistence
 returns the exact direction-specific instance IDs it touched; unchanged
 snapshots still return their instance reference for explicit status evaluation.
+`rowCount` is supplied by the source parser before NX filtering, while
+`nxFlightCount` records the normalized Air Macau observations.
 
 ## Roll back an application release
 

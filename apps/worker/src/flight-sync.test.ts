@@ -55,6 +55,7 @@ function complete(flights: NormalizedFlight[]): FlightSourceFetchResult {
     fetchedAt: observedAt,
     sourceUpdatedAt: null,
     warnings: [],
+    rowCount: flights.length,
   };
 }
 
@@ -65,6 +66,7 @@ function failed(code: 'TIMEOUT' | 'HTTP_ERROR'): FlightSourceFetchResult {
     fetchedAt: observedAt,
     sourceUpdatedAt: null,
     warnings: [],
+    rowCount: 0,
     error: { code, message: code, retryable: true },
   };
 }
@@ -245,6 +247,7 @@ describe('FlightSyncService', () => {
             fetchedAt: observedAt,
             sourceUpdatedAt: null,
             warnings: [warning],
+            rowCount: 7,
           }
         : complete([arrival]),
     );
@@ -401,6 +404,56 @@ describe('FlightSyncService', () => {
         status: 'FAILED',
         nxFlightCount: 1,
       }),
+    );
+  });
+
+  it('renews the lease before persisting each usable direction', async () => {
+    const harness = createHarness();
+    await harness.service.run({ serviceDate: '2026-09-22', trigger: 'MANUAL' });
+    expect(harness.lock.renew).toHaveBeenCalledWith({
+      name: 'flight-sync',
+      ownerId: 'sync-owner',
+      now: observedAt,
+      leaseMs: 90_000,
+    });
+    expect(harness.lock.renew).toHaveBeenCalledTimes(4);
+  });
+
+  it('awaits sibling work when failure finalization also rejects', async () => {
+    const harness = createHarness();
+    let resolveArrival!: (result: FlightSourceFetchResult) => void;
+    vi.mocked(harness.source.fetchFlights).mockImplementation(
+      async ({ directions }) => {
+        if (directions[0] === 'DEPARTURE') throw new Error('source crashed');
+        return new Promise((resolve) => {
+          resolveArrival = resolve;
+        });
+      },
+    );
+    vi.mocked(harness.syncRepository.completeScrapeRun).mockRejectedValueOnce(
+      new Error('database unavailable'),
+    );
+    const running = harness.service.run({
+      serviceDate: '2026-09-22',
+      trigger: 'MANUAL',
+    });
+    await vi.waitFor(() =>
+      expect(harness.source.fetchFlights).toHaveBeenCalledTimes(2),
+    );
+    expect(harness.lock.release).not.toHaveBeenCalled();
+    resolveArrival(complete([arrival]));
+    await expect(running).resolves.toMatchObject({ status: 'PARTIAL' });
+    expect(harness.lock.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('records raw source rows separately from persisted NX flights', async () => {
+    const harness = createHarness((direction) => ({
+      ...complete(direction === 'DEPARTURE' ? [departure] : [arrival]),
+      rowCount: 9,
+    }));
+    await harness.service.run({ serviceDate: '2026-09-22', trigger: 'MANUAL' });
+    expect(harness.syncRepository.completeScrapeRun).toHaveBeenCalledWith(
+      expect.objectContaining({ rowCount: 9, nxFlightCount: 1 }),
     );
   });
 });

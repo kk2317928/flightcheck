@@ -83,6 +83,7 @@ describe('parseMacauAirportDocument', () => {
         destination: { code: 'MFM', name: 'Macau' },
       }),
     ]);
+    expect(result.rowCount).toBe(2);
   });
 
   it.each([
