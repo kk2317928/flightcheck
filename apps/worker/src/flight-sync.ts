@@ -269,18 +269,28 @@ export function createFlightSyncService(
     } catch (cause) {
       const code = errorCode(cause);
       if (!completed) {
-        await dependencies.syncRepository.completeScrapeRun({
-          id: scrapeRunId,
-          status: 'FAILED',
-          finishedAt: dependencies.now(),
-          fetchedAt,
-          sourceUpdatedAt,
-          rowCount,
-          nxFlightCount: processedFlights,
-          warningCount: warnings.length,
-          warnings,
-          errorCode: code,
-        });
+        try {
+          await dependencies.syncRepository.completeScrapeRun({
+            id: scrapeRunId,
+            status: 'FAILED',
+            finishedAt: dependencies.now(),
+            fetchedAt,
+            sourceUpdatedAt,
+            rowCount,
+            nxFlightCount: processedFlights,
+            warningCount: warnings.length,
+            warnings,
+            errorCode: code,
+          });
+        } catch {
+          return {
+            direction: configuration.direction,
+            scrapeRunId,
+            status: 'FAILED',
+            processedFlights,
+            errorCode: 'DIRECTION_FINALIZATION_FAILED',
+          };
+        }
       }
       return {
         direction: configuration.direction,
@@ -336,3 +346,4 @@ export function createFlightSyncService(
     },
   };
 }
+

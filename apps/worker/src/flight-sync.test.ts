@@ -446,6 +446,35 @@ describe('FlightSyncService', () => {
     expect(harness.lock.release).toHaveBeenCalledTimes(1);
   });
 
+  it('preserves direction context when failure finalization rejects', async () => {
+    const harness = createHarness((direction) =>
+      direction === 'DEPARTURE' ? complete([departure]) : complete([]),
+    );
+    vi.mocked(harness.applyStatusObservation).mockRejectedValueOnce(
+      new Error('status unavailable'),
+    );
+    vi.mocked(harness.syncRepository.completeScrapeRun).mockImplementation(
+      async (input) => {
+        if (input.id === 'run-1' && input.status === 'FAILED') {
+          throw new Error('database unavailable');
+        }
+      },
+    );
+
+    const result = await harness.service.run({
+      serviceDate: '2026-09-22',
+      trigger: 'MANUAL',
+    });
+
+    expect(result.directions[0]).toEqual({
+      direction: 'DEPARTURE',
+      scrapeRunId: 'run-1',
+      status: 'FAILED',
+      processedFlights: 1,
+      errorCode: 'DIRECTION_FINALIZATION_FAILED',
+    });
+  });
+
   it('records raw source rows separately from persisted NX flights', async () => {
     const harness = createHarness((direction) => ({
       ...complete(direction === 'DEPARTURE' ? [departure] : [arrival]),
@@ -457,3 +486,4 @@ describe('FlightSyncService', () => {
     );
   });
 });
+

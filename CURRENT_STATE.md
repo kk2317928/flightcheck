@@ -95,16 +95,16 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
 - T-010 targeted verification passes: Flight Source 35 tests, Domain 53 tests,
-  DB 46 tests, and Worker 29 tests.
+  DB 46 tests, and Worker 30 tests.
 - `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
-  passes: formatting, all 6 package lint/typecheck/build tasks, and 205 tests
-  (Shared 15, Flight Source 35, Domain 53, DB 46, Worker 29, Web 27).
+  passes: formatting, all 6 package lint/typecheck/build tasks, and 206 tests
+  (Shared 15, Flight Source 35, Domain 53, DB 46, Worker 30, Web 27).
 
 ### T-010 — Flight Sync Use Case 與 Worker
 
 - Commit: `feat(worker): add resilient flight sync job` (this implementation commit)
-- Verification: CP-02 targeted package suites → 163 tests passed; fresh
-  `pnpm verify` → 205 tests and all 6 package lint/typecheck/build passed.
+- Verification: CP-02 targeted package suites → 164 tests passed; fresh
+  `pnpm verify` → 206 tests and all 6 package lint/typecheck/build passed.
 - Decisions: one global owner-qualified lease; separate concurrent directional
   runs; partial direction commits independently; missing rows have no status
   meaning; stale CAS reloads and re-evaluates once; CLI and timer share one use
@@ -132,3 +132,4 @@ Review the CP-02 gate and create the checkpoint tag if approved, then begin
 ```text
 feat(worker): add resilient flight sync job
 ```
+
