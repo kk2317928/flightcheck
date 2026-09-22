@@ -44,4 +44,19 @@ describe('Prisma schema contract', () => {
     );
     expect(schema).toMatch(/model JobLock \{[\s\S]*name\s+String\s+@id/);
   });
+
+  it('retains previous values for each recorded status transition', () => {
+    const schema = readFileSync(schemaPath, 'utf8');
+    const historyModel = schema.match(
+      /model FlightStatusHistory \{[\s\S]*?\n\}/,
+    )?.[0];
+
+    expect(historyModel).toMatch(
+      /previousOperationalStatus\s+OperationalStatus\?/,
+    );
+    expect(historyModel).toMatch(
+      /previousPerformanceStatus\s+PerformanceStatus\?/,
+    );
+    expect(historyModel).toMatch(/previousDelayMinutes\s+Int\?/);
+  });
 });

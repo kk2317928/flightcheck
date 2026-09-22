@@ -21,6 +21,7 @@
     "typecheck": "prisma generate && tsc --noEmit"
   },
   "dependencies": {
+    "@flightcheck/flight-source": "workspace:*",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "pg": "^8.16.3"

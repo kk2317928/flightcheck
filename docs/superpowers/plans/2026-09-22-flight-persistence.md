@@ -48,11 +48,13 @@
 ### Task 1: Canonical Snapshot Contract
 
 **Files:**
+
 - Create: `packages/db/src/flight-snapshot.test.ts`
 - Create: `packages/db/src/flight-snapshot.ts`
 - Modify: `packages/db/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `NormalizedFlight` from `@flightcheck/flight-source`.
 - Produces: `CanonicalFlightSnapshot`, `buildCanonicalFlightSnapshot(flight)`, and `hashCanonicalFlightSnapshot(payload)`.
 
@@ -162,11 +164,13 @@ Expected: PASS with 2 tests and no warnings.
 ### Task 2: Atomic Observation Persistence
 
 **Files:**
+
 - Create: `packages/db/tests/flight-observation-repository.test.ts`
 - Create: `packages/db/src/flight-observation-repository.ts`
 - Modify: `packages/db/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `buildCanonicalFlightSnapshot`, `hashCanonicalFlightSnapshot`, `PrismaClient`, `NormalizedFlight[]`, `FlightSourceWarning[]`.
 - Produces: `createFlightObservationRepository(prisma)`, `persistObservationBatch(input)`, and `PersistObservationBatchResult`.
 
@@ -175,12 +179,14 @@ Expected: PASS with 2 tests and no warnings.
 Use the existing PGlite socket pattern from `packages/db/tests/seed-integration.test.ts`, on a distinct port, apply every migration in filename order, and create a `ScrapeRun`. Assert that the first call:
 
 ```ts
-await expect(repository.persistObservationBatch({
-  scrapeRunId,
-  observedAt: new Date('2026-09-22T08:05:00.000Z'),
-  flights: [departure],
-  warnings: [],
-})).resolves.toEqual({
+await expect(
+  repository.persistObservationBatch({
+    scrapeRunId,
+    observedAt: new Date('2026-09-22T08:05:00.000Z'),
+    flights: [departure],
+    warnings: [],
+  }),
+).resolves.toEqual({
   processedInstances: 1,
   insertedSnapshots: 1,
   unchangedSnapshots: 0,
@@ -270,6 +276,7 @@ Expected: every observation, replay, direction, preservation, warning, and rollb
 ### Task 3: Race-Safe Status History
 
 **Files:**
+
 - Create: `packages/db/prisma/migrations/20260922000200_status_history_previous_values/migration.sql`
 - Modify: `packages/db/prisma/schema.prisma`
 - Modify: `packages/db/tests/schema-contract.test.ts`
@@ -278,6 +285,7 @@ Expected: every observation, replay, direction, preservation, warning, and rollb
 - Modify: `packages/db/src/flight-observation-repository.ts`
 
 **Interfaces:**
+
 - Consumes: a persisted `FlightInstance` ID and caller-calculated target status from T-009.
 - Produces: `recordStatusTransition(input): Promise<{ changed: boolean }>` and history rows containing both previous and new state.
 
@@ -322,6 +330,9 @@ Define the public input:
 ```ts
 export interface RecordStatusTransitionInput {
   flightInstanceId: string;
+  expectedOperationalStatus: OperationalStatus;
+  expectedPerformanceStatus: PerformanceStatus;
+  expectedDelayMinutes: number | null;
   operationalStatus: OperationalStatus;
   performanceStatus: PerformanceStatus;
   delayMinutes: number | null;
@@ -337,17 +348,18 @@ For an unchanged request, expect `{ changed: false }`, no instance mutation, and
 Run: `pnpm --filter @flightcheck/db exec vitest run tests/flight-observation-repository.test.ts -t 'does not record an unchanged status|records one real status transition'`
 Expected: FAIL because `recordStatusTransition` is missing.
 
-- [ ] **Step 7: Implement optimistic compare-and-write in one transaction**
+- [ ] **Step 7: Implement expected-state compare-and-write in one transaction**
 
-Within a bounded retry loop in `prisma.$transaction`:
+Within `prisma.$transaction`:
 
 1. read the current instance or throw a contextual not-found error;
 2. return unchanged when all three target dimensions equal current values;
-3. call `updateMany` with `where` containing the ID and all three prior dimensions, including `null` delay handling;
-4. when count is zero, re-read and retry because another transaction won;
-5. when count is one, insert one history row with previous and target values and return changed.
+3. reject as stale when current values do not match the caller's expected state;
+4. call `updateMany` with `where` containing the ID and all three expected dimensions, including `null` delay handling;
+5. when count is zero, re-read once: return unchanged only if the target already won, otherwise reject the stale decision;
+6. when count is one, insert one history row with expected and target values and return changed.
 
-Limit retries to three and throw a contextual concurrency error if contention never settles. This prevents a stale caller from overwriting a newer state without requiring database-specific advisory locks.
+This prevents a stale caller from overwriting a newer state without requiring database-specific advisory locks. T-009 must recompute policy after a stale rejection.
 
 - [ ] **Step 8: Run transition tests and verify GREEN**
 
@@ -371,11 +383,13 @@ Expected: PASS through `createMany({ skipDuplicates: true })` and the database u
 ### Task 4: Full Verification, Handoff, and Checkpoint Commit
 
 **Files:**
+
 - Modify: `packages/db/README.md`
 - Modify: `CURRENT_STATE.md`
 - Modify: `tasks.md`
 
 **Interfaces:**
+
 - Consumes: all T-008 repository exports and verification evidence.
 - Produces: durable usage documentation, verified task ledger, and the single authoritative T-008 commit.
 

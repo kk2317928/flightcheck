@@ -33,8 +33,12 @@ The database package exposes a repository with two explicit operations:
 
 ```ts
 interface FlightObservationRepository {
-  persistObservationBatch(input: PersistObservationBatchInput): Promise<PersistObservationBatchResult>;
-  recordStatusTransition(input: RecordStatusTransitionInput): Promise<StatusTransitionResult>;
+  persistObservationBatch(
+    input: PersistObservationBatchInput,
+  ): Promise<PersistObservationBatchResult>;
+  recordStatusTransition(
+    input: RecordStatusTransitionInput,
+  ): Promise<StatusTransitionResult>;
 }
 ```
 
@@ -47,7 +51,7 @@ The observation input contains:
 
 The result reports counts for processed instances, inserted snapshots, unchanged snapshots, and persisted warnings. It does not expose Prisma models as the public contract.
 
-`recordStatusTransition` accepts a flight-instance identifier, target operational and performance values, delay metadata, a reason, and `observedAt`. Its result indicates whether a transition was written.
+`recordStatusTransition` accepts a flight-instance identifier, the expected operational/performance/delay state evaluated by T-009, the target state, a reason, and `observedAt`. Its result indicates whether a transition was written. An expected-state mismatch rejects stale policy work unless the requested target is already current.
 
 ## Flight Identity
 
@@ -131,7 +135,7 @@ Within one transaction, the repository locks or conditionally updates the curren
 
 The comparison includes operational status, performance status, and delay minutes. Cancellation-specific fields remain governed by the T-009 policy and are changed only when explicitly included in the transition contract.
 
-Concurrent calls must not produce duplicate transitions from the same prior state. The implementation plan must select a database-supported conditional-update or locking strategy compatible with the configured Prisma/database runtime.
+Concurrent calls must not produce duplicate transitions from the same prior state. A conditional update compares the caller's expected state; if another transition wins, an identical target is deduplicated and a different stale target is rejected for policy recomputation.
 
 ## Error Contract
 
@@ -170,11 +174,11 @@ Required cases:
 
 ## Acceptance Mapping
 
-| Requirement | Design mechanism |
-|---|---|
+| Requirement                          | Design mechanism                                             |
+| ------------------------------------ | ------------------------------------------------------------ |
 | Identical replay creates no snapshot | Canonical material hash plus instance/hash unique constraint |
-| Material change creates one snapshot | Deterministic canonical payload and race-safe insert |
-| Arrival/departure do not merge | Direction is part of the instance natural key |
-| Status history tracks real changes | Compare-and-write transition transaction |
-| Warnings are durable | Structured JSON and count on the referenced scrape run |
-| Batch writes are consistent | One Prisma transaction with rollback on any failure |
+| Material change creates one snapshot | Deterministic canonical payload and race-safe insert         |
+| Arrival/departure do not merge       | Direction is part of the instance natural key                |
+| Status history tracks real changes   | Compare-and-write transition transaction                     |
+| Warnings are durable                 | Structured JSON and count on the referenced scrape run       |
+| Batch writes are consistent          | One Prisma transaction with rollback on any failure          |

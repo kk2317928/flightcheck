@@ -184,15 +184,18 @@ model FlightSnapshot {
 }
 
 model FlightStatusHistory {
-  id                String            @id @default(uuid()) @db.Uuid
-  flightInstanceId  String            @db.Uuid
-  operationalStatus OperationalStatus
-  performanceStatus PerformanceStatus
-  delayMinutes      Int?
-  reason            String?
-  observedAt        DateTime          @db.Timestamptz(3)
-  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
-  flightInstance    FlightInstance    @relation(fields: [flightInstanceId], references: [id], onDelete: Cascade)
+  id                        String             @id @default(uuid()) @db.Uuid
+  flightInstanceId          String             @db.Uuid
+  previousOperationalStatus OperationalStatus?
+  previousPerformanceStatus PerformanceStatus?
+  previousDelayMinutes      Int?
+  operationalStatus         OperationalStatus
+  performanceStatus         PerformanceStatus
+  delayMinutes              Int?
+  reason                    String?
+  observedAt                DateTime           @db.Timestamptz(3)
+  createdAt                 DateTime           @default(now()) @db.Timestamptz(3)
+  flightInstance            FlightInstance     @relation(fields: [flightInstanceId], references: [id], onDelete: Cascade)
 
   @@index([flightInstanceId, observedAt])
 }

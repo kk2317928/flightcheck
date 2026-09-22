@@ -1,12 +1,12 @@
 # FlightCheck Current State
 
 > Updated: 2026-09-22  
-> Branch: `feat/t-007-macau-airport-parser`  
+> Branch: `feat/t-008-flight-persistence`  
 > Baseline commit inspected: `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`
 
 ## Project Phase
 
-CP-02 implementation is active. T-001 through T-007 are verified.
+CP-02 implementation is active. T-001 through T-008 are verified.
 
 The repository began with documentation only. It now contains:
 
@@ -51,6 +51,7 @@ The repository began with documentation only. It now contains:
 | T-005 Flight source contracts       | Complete                       | Adapter, raw/normalized schemas, warnings and discriminated fetch results           |
 | T-006 Macau Airport HTTP client     | Complete                       | Official board URLs, timeout/retry policy, source timestamps and sanitized fixtures |
 | T-007 Macau Airport parser          | Complete                       | NX filtering, IATA/status/time normalization, warnings, deduplication and adapter   |
+| T-008 Flight persistence            | Complete                       | Atomic upserts, changed-only snapshots, warning storage and guarded status history  |
 
 ## Active Checkpoint
 
@@ -58,7 +59,7 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-007 — Parser、機場詞典與狀態正規化` is complete.
+`T-008 — Flight Persistence 與變更歷史` is complete. The next Task is `T-009 — Status Engine`.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -70,11 +71,13 @@ T-006 added a native-fetch HTTP client for the official Macau Airport Departures
 
 T-007 added a Cheerio parser behind `MacauAirportFlightSource`. It reads only top-level desktop cells, filters to valid `NX` flight numbers while preserving letter suffixes, resolves known airport names through a safe local IATA map, validates every output against `NormalizedFlightSchema`, and converts Macau-local service/status times to UTC. Actual times choose the nearest date around the scheduled instant, including midnight rollover; equal-distance cases remain unresolved with `AMBIGUOUS_TIME`. Delay-until timestamps must be at or after the scheduled instant, allowing explicit next-day long delays. Source statuses map to scheduled, delayed, departed, arrived, cancelled, diverted or unknown. Unknown airports/statuses, missing statuses, malformed or structurally unrecognized rows and duplicates emit warnings instead of guesses. Identical flights are deduplicated by service date, direction and flight number; conflicting duplicates are suppressed rather than exposing an arbitrary cancellation or departure. Missing service-date coverage is PARTIAL, any parser warning or unavailable direction is PARTIAL, and total HTTP failure remains FAILED with no flights.
 
+T-008 added `FlightObservationRepository` to `@flightcheck/db`. Each normalized batch validates the source contract and atomically upserts flights/instances, replaces `ScrapeRun` warnings and writes only material snapshots. Canonical SHA-256 payloads exclude observation/run metadata, while database `ON CONFLICT` and unique constraints make new-flight and snapshot discovery replay-safe. Arrival and departure remain distinct through the existing natural key. Status persistence requires the T-009 caller's expected state, conditionally writes the target, records previous/new values, deduplicates an identical winner and rejects stale policy decisions. Migration `20260922000200_status_history_previous_values` adds nullable previous-state columns. Turbo now orders each package test after its own build to prevent concurrent Prisma generation.
+
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- `pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 88 Vitest tests and production builds for DB, Flight Source, Shared, Web and Worker.
-- DB integration tests apply the initial migration to an empty embedded PostgreSQL instance, enforce event/post uniqueness, and run the Prisma seed twice without duplicates.
+- `TURBO_FORCE=true pnpm verify` passes with `TZ` and `DATABASE_URL`: formatting, ESLint, TypeScript, 110 Vitest tests and production builds for DB, Flight Source, Shared, Web and Worker.
+- DB integration tests apply every migration in order to an empty embedded PostgreSQL instance, enforce event/post and snapshot uniqueness, verify conflict-safe SQL/status CAS behavior, and run the Prisma seed twice without duplicates.
 - Next.js production build exposes the public routes, protected `/admin`, login UI and three Admin auth endpoints; its database-backed proxy compiles successfully. Worker compiles to `dist/`.
 - The auth integration test uses embedded PostgreSQL to prove login, audit creation, session authentication, logout revocation and prevention of token reuse. Unit/route tests cover Argon2id, cookie flags, throttling and unauthorized page/API handling.
 - `/api/health` returns the health contract with an `x-correlation-id` response header; Worker startup emits a structured `worker.ready` record with a job correlation ID.
@@ -84,13 +87,14 @@ T-007 added a Cheerio parser behind `MacauAirportFlightSource`. It reads only to
 
 - Macau Airport may change its public HTML structure. The client rejects pages without the board marker, while parser behavior is pinned to sanitized fixtures and surfaces malformed rows as warnings.
 - The airport dictionary intentionally covers observed P0 destinations. Newly observed names remain code-null with `UNKNOWN_AIRPORT` until reviewed and added; the parser does not infer IATA codes.
+- PGlite serializes transaction execution, so concurrency tests also assert conflict-safe emitted SQL and stale expected-state rejection; production PostgreSQL remains the final concurrency authority.
 - Threads/Facebook credentials and production authorization are not yet validated. They are not required before T-017/T-018.
 - Exact production VPS details are intentionally deferred to T-031.
 
 ## Next Exact Action
 
-Start T-008 from the completed T-007 commit. Implement Flight／FlightInstance upsert, changed-only snapshots, status history, warning persistence and transaction boundaries using the normalized source contract.
+Start T-009 Status Engine using `recordStatusTransition` expected-state semantics. Implement operational/performance rules, including two consecutive explicit cancellation observations and recovery, without moving policy into the persistence repository.
 
 ```text
-feat(flights): persist instances snapshots and history
+feat(status): implement operational and performance rules
 ```

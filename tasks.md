@@ -23,7 +23,7 @@ Checkpoint gate:
 - [x] T-005 Flight Source Contract 與 NormalizedFlight
 - [x] T-006 MacauAirport HTTP Client 與 Parser Fixtures
 - [x] T-007 Parser、機場詞典與狀態正規化
-- [ ] T-008 Flight Persistence 與變更歷史
+- [x] T-008 Flight Persistence 與變更歷史
 - [ ] T-009 Status Engine
 - [ ] T-010 Flight Sync Use Case 與 Worker
 

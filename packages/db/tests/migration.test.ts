@@ -1,21 +1,28 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-const migrationPath = fileURLToPath(
-  new URL(
-    '../prisma/migrations/20260922000100_initial/migration.sql',
-    import.meta.url,
-  ),
+const migrationsDirectory = fileURLToPath(
+  new URL('../prisma/migrations/', import.meta.url),
 );
+
+const migrationPaths = readdirSync(migrationsDirectory, {
+  withFileTypes: true,
+})
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .sort()
+  .map((directory) => `${migrationsDirectory}/${directory}/migration.sql`);
 
 describe('initial PostgreSQL migration', () => {
   const db = new PGlite();
 
   beforeAll(async () => {
-    await db.exec(readFileSync(migrationPath, 'utf8'));
+    for (const migrationPath of migrationPaths) {
+      await db.exec(readFileSync(migrationPath, 'utf8'));
+    }
   });
 
   afterAll(async () => {
@@ -35,6 +42,21 @@ describe('initial PostgreSQL migration', () => {
         'JobLock',
         'SocialEvent',
         'SocialPost',
+      ]),
+    );
+  });
+
+  it('adds previous values to status history', async () => {
+    const result = await db.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'FlightStatusHistory'`,
+    );
+
+    expect(result.rows.map(({ column_name }) => column_name)).toEqual(
+      expect.arrayContaining([
+        'previousOperationalStatus',
+        'previousPerformanceStatus',
+        'previousDelayMinutes',
       ]),
     );
   });
