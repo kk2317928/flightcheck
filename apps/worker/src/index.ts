@@ -1,7 +1,7 @@
-import { getWorkerHealth } from './health.js';
+import { runWorkerStartup } from './runtime.js';
 
 export function startWorker(): void {
-  process.stdout.write(`${JSON.stringify(getWorkerHealth())}\n`);
+  runWorkerStartup();
 }
 
 startWorker();
