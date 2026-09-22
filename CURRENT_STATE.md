@@ -61,7 +61,7 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-010 — Flight Sync Use Case 與 Worker` is active. Its approved design uses one reusable Worker orchestration service, independent departure/arrival runs, a global lease, one stale-decision re-evaluation, a five-minute interval, and a manual CLI. Product-code implementation has not started.
+`T-010 — Flight Sync Use Case 與 Worker` is active. Its approved design and implementation plan use one reusable Worker orchestration service, independent departure/arrival runs, a global lease, one stale-decision re-evaluation, a five-minute interval, and a manual CLI. Product-code implementation has not started.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -97,7 +97,7 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Review and approve `docs/superpowers/specs/2026-09-22-flight-sync-worker-design.md`, then write the T-010 implementation plan. Do not begin product-code implementation before that plan is approved.
+Review `docs/superpowers/plans/2026-09-22-flight-sync-worker.md`, select the execution approach, then implement the plan with TDD. Do not begin product-code implementation before that selection.
 
 ```text
 feat(worker): add resilient flight sync job
