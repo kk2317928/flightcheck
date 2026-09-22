@@ -9,13 +9,13 @@
 - [x] T-001 Repository 與工程基線
 - [x] T-002 環境設定、時間與可觀測性基礎
 - [x] T-003 PostgreSQL／Prisma 核心 Schema
-- [ ] T-004 Admin 身分驗證、Session 與 Audit
+- [x] T-004 Admin 身分驗證、Session 與 Audit
 
 Checkpoint gate:
 
-- [ ] Fresh setup follows README successfully
-- [ ] Database migration and seed pass
-- [ ] Admin login/logout, protected routes and audit pass
+- [x] Fresh setup follows README successfully
+- [x] Database migration and seed pass
+- [x] Admin login/logout, protected routes and audit pass
 - [ ] Tag `cp-01-foundation`
 
 ## CP-02 — Flight Acquisition & Status

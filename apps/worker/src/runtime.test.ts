@@ -6,7 +6,11 @@ describe('runWorkerStartup', () => {
   it('writes a structured ready log with a job correlation ID', () => {
     const lines: string[] = [];
 
-    runWorkerStartup((line) => lines.push(line), { TZ: 'Asia/Macau' });
+    runWorkerStartup((line) => lines.push(line), {
+      TZ: 'Asia/Macau',
+      DATABASE_URL:
+        'postgresql://flightcheck:flightcheck@localhost:5432/flightcheck',
+    });
 
     expect(lines).toHaveLength(1);
     const record = JSON.parse(lines[0]!) as Record<string, unknown>;

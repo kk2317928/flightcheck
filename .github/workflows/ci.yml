@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Macau
+      DATABASE_URL: postgresql://flightcheck:flightcheck@localhost:5432/flightcheck
+      TRUST_PROXY_HEADERS: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

@@ -41,6 +41,18 @@ pnpm --filter @flightcheck/db db:seed
 
 Rollback and destructive development rebuild procedures are documented in [`packages/db/README.md`](packages/db/README.md).
 
+Create the first administrator after applying the database migration. The password must contain at least 12 characters; the command stores only an Argon2id hash and refuses to overwrite an existing account.
+
+```bash
+ADMIN_EMAIL=admin@example.com \
+ADMIN_PASSWORD='replace-with-a-long-unique-password' \
+pnpm --filter @flightcheck/web admin:create
+```
+
+Open `http://localhost:3000/admin/login` to sign in. Admin sessions last eight hours, use a Secure/HttpOnly/SameSite=Strict cookie, and are revoked on logout.
+
+`TRUST_PROXY_HEADERS` defaults to `false`; in that mode forwarded IP headers are ignored and login attempts share a conservative source limit while retaining a separate per-account limit. Set it to `true` only behind an ingress that removes caller-supplied `X-Real-IP`/`X-Forwarded-For` and writes trusted values itself.
+
 ## Verification
 
 ```bash
