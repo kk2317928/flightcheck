@@ -25,7 +25,7 @@ Checkpoint gate:
 - [x] T-007 Parser、機場詞典與狀態正規化
 - [x] T-008 Flight Persistence 與變更歷史
 - [x] T-009 Status Engine
-- [ ] T-010 Flight Sync Use Case 與 Worker
+- [-] T-010 Flight Sync Use Case 與 Worker
 
 Checkpoint gate:
 

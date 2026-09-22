@@ -1,12 +1,12 @@
 # FlightCheck Current State
 
 > Updated: 2026-09-22  
-> Branch: `feat/t-009-status-engine`  
+> Branch: `feat/t-010-flight-sync-worker`  
 > Baseline commit inspected: `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`
 
 ## Project Phase
 
-CP-02 implementation is active. T-001 through T-009 are verified; T-010 is next.
+CP-02 implementation is active. T-001 through T-009 are verified; T-010 design is active.
 
 The repository began with documentation only. It now contains:
 
@@ -61,7 +61,7 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-009 — Status Engine` is complete. `T-010 — Flight Sync Use Case 與 Worker` is next and must load the current policy state, apply each explicit normalized observation through the domain engine, and retry or surface stale compare-and-set decisions without treating a missing row as a status observation.
+`T-010 — Flight Sync Use Case 與 Worker` is active. Its approved design uses one reusable Worker orchestration service, independent departure/arrival runs, a global lease, one stale-decision re-evaluation, a five-minute interval, and a manual CLI. Product-code implementation has not started.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -97,8 +97,8 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Begin T-010 from `docs/IMPLEMENTATION_TASKS.md`: implement the Flight Sync use case and Worker integration on a new focused branch, preserving the T-009 missing-row boundary and full-field compare-and-set contract.
+Review and approve `docs/superpowers/specs/2026-09-22-flight-sync-worker-design.md`, then write the T-010 implementation plan. Do not begin product-code implementation before that plan is approved.
 
 ```text
-feat(domain): implement flight status engine
+feat(worker): add resilient flight sync job
 ```
