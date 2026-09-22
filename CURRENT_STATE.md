@@ -6,11 +6,12 @@
 
 ## Project Phase
 
-CP-02 implementation is complete through T-010. The automated CP-02 gate is
-green and checkpointed by `cp-02-flight-engine`. The approved First Release
-Fast Track is active at FR-01, beginning with T-011. It targets a production-safe
-public release before the deferred SNS and complete Admin scope; the original
-T-001–T-032 P0 backlog remains authoritative.
+CP-02 implementation is complete through T-010 and its automated gate is green.
+The required `cp-02-flight-engine` tag is blocked because the current GitHub
+connector can update branches but cannot create tags. The approved First Release
+Fast Track will begin at FR-01/T-011 immediately after that tag exists. It targets
+a production-safe public release before the deferred SNS and complete Admin
+scope; the original T-001–T-032 P0 backlog remains authoritative.
 
 The repository began with documentation only. It now contains:
 
@@ -62,7 +63,7 @@ The repository began with documentation only. It now contains:
 
 ## Active Checkpoint
 
-`FR-01 — Truthful statistics`
+`CP-02 — Flight Acquisition & Status` (tag creation blocked)
 
 ## Active Task
 
@@ -131,8 +132,8 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Implement `T-011 — Statistics Engine` using the approved First Release Fast
-Track plan.
+Create `cp-02-flight-engine` at commit `1966f26ea7fffdd2ca4d8505e7ebb5f63002016f`,
+then implement `T-011 — Statistics Engine` using the approved Fast Track plan.
 
 ```text
 feat(worker): add resilient flight sync job
