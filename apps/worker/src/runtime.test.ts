@@ -19,7 +19,10 @@ describe('runWorkerStartup', () => {
       prisma: { $disconnect: disconnect },
       logger: {},
     }));
-    const startScheduler = vi.fn(() => ({ stop }));
+    const startScheduler = vi.fn(() => ({
+      stop,
+      waitForIdle: vi.fn(async () => undefined),
+    }));
     const runtime = runWorkerStartup((line) => lines.push(line), environment, {
       createServices,
       startScheduler,
@@ -50,6 +53,13 @@ describe('runWorkerStartup', () => {
   it('stops scheduling and disconnects on termination signal', async () => {
     const stop = vi.fn();
     const disconnect = vi.fn(async () => undefined);
+    let finish!: () => void;
+    const waitForIdle = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
     const handlers = new Map<string, () => void>();
     const processPort = {
       once: vi.fn((event: string, handler: () => void) => {
@@ -58,11 +68,21 @@ describe('runWorkerStartup', () => {
       }),
     };
     installWorkerSignalHandlers(
-      { stop, disconnect },
+      {
+        stop,
+        disconnect,
+        shutdown: async () => {
+          stop();
+          await waitForIdle();
+          await disconnect();
+        },
+      },
       processPort as unknown as Pick<NodeJS.Process, 'once'>,
     );
     handlers.get('SIGTERM')?.();
-    await vi.waitFor(() => expect(disconnect).toHaveBeenCalledTimes(1));
     expect(stop).toHaveBeenCalledTimes(1);
+    expect(disconnect).not.toHaveBeenCalled();
+    finish();
+    await vi.waitFor(() => expect(disconnect).toHaveBeenCalledTimes(1));
   });
 });

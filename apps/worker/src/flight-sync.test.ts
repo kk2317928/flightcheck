@@ -354,4 +354,53 @@ describe('FlightSyncService', () => {
     expect(harness.applyStatusObservation).toHaveBeenCalledTimes(2);
     expect(harness.lock.release).toHaveBeenCalledTimes(1);
   });
+
+  it('waits for sibling work before releasing when one scrape run cannot start', async () => {
+    const harness = createHarness();
+    let resolveArrival!: (result: FlightSourceFetchResult) => void;
+    vi.mocked(harness.syncRepository.startScrapeRun)
+      .mockRejectedValueOnce(new Error('run insert failed'))
+      .mockResolvedValueOnce({ id: 'arrival-run' });
+    vi.mocked(harness.source.fetchFlights).mockImplementation(
+      async () =>
+        new Promise((resolve) => {
+          resolveArrival = resolve;
+        }),
+    );
+    const running = harness.service.run({
+      serviceDate: '2026-09-22',
+      trigger: 'MANUAL',
+    });
+    await vi.waitFor(() =>
+      expect(harness.source.fetchFlights).toHaveBeenCalledTimes(1),
+    );
+    expect(harness.lock.release).not.toHaveBeenCalled();
+    resolveArrival(complete([arrival]));
+    await expect(running).resolves.toMatchObject({ status: 'PARTIAL' });
+    expect(harness.lock.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains persisted counts when later status processing fails', async () => {
+    const harness = createHarness((direction) =>
+      direction === 'DEPARTURE' ? complete([departure]) : complete([]),
+    );
+    vi.mocked(harness.applyStatusObservation).mockRejectedValueOnce(
+      new Error('status unavailable'),
+    );
+    const result = await harness.service.run({
+      serviceDate: '2026-09-22',
+      trigger: 'MANUAL',
+    });
+    expect(result.directions[0]).toMatchObject({
+      status: 'FAILED',
+      processedFlights: 1,
+    });
+    expect(harness.syncRepository.completeScrapeRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'run-1',
+        status: 'FAILED',
+        nxFlightCount: 1,
+      }),
+    );
+  });
 });

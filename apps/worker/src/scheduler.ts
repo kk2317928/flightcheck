@@ -9,31 +9,46 @@ export interface FlightSyncSchedulerDependencies {
   now: () => Date;
   logger: {
     error(event: string, context?: Record<string, unknown>): void;
+    info(event: string, context?: Record<string, unknown>): void;
   };
 }
 
 export interface FlightSyncScheduler {
   stop(): void;
+  waitForIdle(): Promise<void>;
 }
 
 export function startFlightSyncScheduler(
   dependencies: FlightSyncSchedulerDependencies,
 ): FlightSyncScheduler {
   let stopped = false;
+  const activeRuns = new Set<Promise<void>>();
 
   function dispatch(trigger: FlightSyncInput['trigger']): void {
     if (stopped) return;
-    void dependencies.service
+    const task = dependencies.service
       .run({
         serviceDate: getMacauDateKey(dependencies.now()),
         trigger,
+      })
+      .then((result) => {
+        dependencies.logger.info('flight-sync.completed', {
+          correlationId: result.correlationId,
+          directions: result.directions,
+          status: result.status,
+          trigger,
+        });
       })
       .catch((error: unknown) => {
         dependencies.logger.error('flight-sync.failed', {
           error: error instanceof Error ? error.message : String(error),
           trigger,
         });
+      })
+      .finally(() => {
+        activeRuns.delete(task);
       });
+    activeRuns.add(task);
   }
 
   dispatch('STARTUP');
@@ -43,6 +58,9 @@ export function startFlightSyncScheduler(
     stop() {
       stopped = true;
       clearInterval(interval);
+    },
+    async waitForIdle() {
+      await Promise.allSettled([...activeRuns]);
     },
   };
 }

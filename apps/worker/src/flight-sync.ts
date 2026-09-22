@@ -152,16 +152,28 @@ export function createFlightSyncService(
     correlationId: string,
   ): Promise<DirectionSyncResult> {
     const startedAt = dependencies.now();
-    const { id: scrapeRunId } =
-      await dependencies.syncRepository.startScrapeRun({
+    let scrapeRunId: string;
+    try {
+      const started = await dependencies.syncRepository.startScrapeRun({
         source: configuration.source,
         correlationId,
         startedAt,
       });
+      scrapeRunId = started.id;
+    } catch {
+      return {
+        direction: configuration.direction,
+        scrapeRunId: '',
+        status: 'FAILED',
+        processedFlights: 0,
+        errorCode: 'SCRAPE_RUN_START_FAILED',
+      };
+    }
     let fetchedAt: Date | null = null;
     let sourceUpdatedAt: Date | null = null;
     let warnings: readonly FlightSourceWarning[] = [];
     let rowCount = 0;
+    let processedFlights = 0;
     let completed = false;
 
     try {
@@ -204,6 +216,7 @@ export function createFlightSyncService(
           flights: sourceResult.flights,
           warnings: sourceResult.warnings,
         });
+      processedFlights = persisted.processedInstances;
       for (const instance of persisted.instances) {
         await applyStatus(
           instance.flightInstanceId,
@@ -246,7 +259,7 @@ export function createFlightSyncService(
           fetchedAt,
           sourceUpdatedAt,
           rowCount,
-          nxFlightCount: 0,
+          nxFlightCount: processedFlights,
           warningCount: warnings.length,
           warnings,
           errorCode: code,
@@ -256,7 +269,7 @@ export function createFlightSyncService(
         direction: configuration.direction,
         scrapeRunId,
         status: 'FAILED',
-        processedFlights: 0,
+        processedFlights,
         errorCode: code,
       };
     }

@@ -12,6 +12,7 @@ import type { FlightSyncService } from './flight-sync.js';
 export interface WorkerRuntime {
   stop(): void;
   disconnect(): Promise<void>;
+  shutdown(): Promise<void>;
 }
 interface RuntimeOverrides {
   createServices?: (
@@ -47,14 +48,23 @@ export function runWorkerStartup(
     logger,
   });
   let stopped = false;
+  let shutdownPromise: Promise<void> | undefined;
+  const stop = () => {
+    if (!stopped) {
+      stopped = true;
+      scheduler.stop();
+    }
+  };
   return {
-    stop() {
-      if (!stopped) {
-        stopped = true;
-        scheduler.stop();
-      }
-    },
+    stop,
     disconnect: () => services.prisma.$disconnect(),
+    shutdown() {
+      stop();
+      shutdownPromise ??= scheduler
+        .waitForIdle()
+        .then(() => services.prisma.$disconnect());
+      return shutdownPromise;
+    },
   };
 }
 
@@ -62,10 +72,7 @@ export function installWorkerSignalHandlers(
   runtime: WorkerRuntime,
   processPort: Pick<NodeJS.Process, 'once'> = process,
 ): void {
-  const shutdown = () => {
-    runtime.stop();
-    void runtime.disconnect();
-  };
+  const shutdown = () => void runtime.shutdown();
   processPort.once('SIGINT', shutdown);
   processPort.once('SIGTERM', shutdown);
 }

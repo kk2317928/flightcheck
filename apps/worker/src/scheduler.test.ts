@@ -17,7 +17,7 @@ describe('startFlightSyncScheduler', () => {
     const scheduler = startFlightSyncScheduler({
       service: { run } satisfies FlightSyncService,
       now: () => new Date('2026-09-21T16:30:00.000Z'),
-      logger: { error: vi.fn() },
+      logger: { error: vi.fn(), info: vi.fn() },
     });
     await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
     expect(run).toHaveBeenLastCalledWith({
@@ -38,6 +38,7 @@ describe('startFlightSyncScheduler', () => {
 
   it('logs a rejected run and continues future ticks', async () => {
     const error = vi.fn();
+    const info = vi.fn();
     const run = vi
       .fn<FlightSyncService['run']>()
       .mockRejectedValueOnce(new Error('network down'))
@@ -49,7 +50,7 @@ describe('startFlightSyncScheduler', () => {
     const scheduler = startFlightSyncScheduler({
       service: { run },
       now: () => new Date('2026-09-22T00:00:00.000Z'),
-      logger: { error },
+      logger: { error, info },
     });
     await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(1));
     expect(error).toHaveBeenCalledWith('flight-sync.failed', {
@@ -59,6 +60,41 @@ describe('startFlightSyncScheduler', () => {
 
     await vi.advanceTimersByTimeAsync(300_000);
     expect(run).toHaveBeenCalledTimes(2);
+    expect(info).toHaveBeenCalledWith('flight-sync.completed', {
+      correlationId: 'owner',
+      directions: [],
+      status: 'SUCCESS',
+      trigger: 'SCHEDULED',
+    });
     scheduler.stop();
+  });
+
+  it('reports active work and waits for it to settle', async () => {
+    let resolveRun!: (
+      value: Awaited<ReturnType<FlightSyncService['run']>>,
+    ) => void;
+    const run = vi.fn(
+      () =>
+        new Promise<Awaited<ReturnType<FlightSyncService['run']>>>(
+          (resolve) => {
+            resolveRun = resolve;
+          },
+        ),
+    );
+    const scheduler = startFlightSyncScheduler({
+      service: { run },
+      now: () => new Date('2026-09-22T00:00:00.000Z'),
+      logger: { error: vi.fn(), info: vi.fn() },
+    });
+    scheduler.stop();
+    let settled = false;
+    void scheduler.waitForIdle().then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    resolveRun({ status: 'SUCCESS', correlationId: 'owner', directions: [] });
+    await scheduler.waitForIdle();
+    expect(settled).toBe(true);
   });
 });
