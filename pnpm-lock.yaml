@@ -50,6 +50,9 @@ importers:
       '@flightcheck/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@flightcheck/worker':
+        specifier: workspace:*
+        version: link:../worker
       '@tailwindcss/postcss':
         specifier: ^4.1.13
         version: 4.3.3

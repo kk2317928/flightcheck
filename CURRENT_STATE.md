@@ -1,6 +1,6 @@
 # FlightCheck Current State
 
-> Updated: 2026-09-22  
+> Updated: 2026-09-23  
 > Branch: `feat/t-010-flight-sync-worker`  
 > Baseline commit: `c4112760556e72d580d87fe0a68ff80b5bd2d2de`
 
@@ -8,7 +8,9 @@
 
 CP-02 implementation is complete through T-010, its automated gate is green,
 and annotated tag `cp-02-flight-engine` points to the verified checkpoint commit.
-The approved First Release Fast Track has completed T-020 through T-022 and proceeds to the remaining FR-02 responsive acceptance. It targets a
+The approved First Release Fast Track has completed T-020 through T-022 and the
+launch-critical T-023/T-024 slice. It now proceeds through FR-03 recovery and
+backup operations while browser-backed FR-02 acceptance remains queued. It targets a
 production-safe public release before the deferred SNS and complete Admin scope;
 the original T-001–T-032 P0 backlog remains authoritative.
 
@@ -63,19 +65,29 @@ The repository began with documentation only. It now contains:
 | T-012 Data quality                  | Complete                       | Direction coverage, freshness and critical-warning reasons with conservative watermark |
 | T-013 Daily settlement              | Complete                       | Atomic upsert, FINAL protection, quality-aware settlement and Macau-time scheduler     |
 | T-020 Public read queries           | Complete                       | Validated filters, stable pagination and public-safe DTOs                              |
+| T-023/T-024 launch Admin slice      | Complete                       | Protected operational views, shared manual sync, confirmed recalculation and audit     |
 
 ## Active Checkpoint
 
-`FR-02 — Public product`
+`FR-03 — Minimum operations`
 
 ## Active Task
 
-`Public T-026 responsive acceptance` is next. `T-021/T-022 — Public UI` is
-verified. The server-rendered dashboard presents cancellation information
-before punctuality, explicit COMPLETE/DEGRADED quality, freshness, N/A values
-and empty states. Public detail, history and cancellation routes preserve
-service-date/direction identity and return 404 for missing flights. Semantic
-tables, visible focus styles and mobile-contained overflow are implemented.
+`T-027/T-028 launch slice — restart recovery, heartbeat and backup/restore` is
+next. The T-023/T-024 launch slice is verified: protected Admin pages expose
+recent flights, scrape runs and daily statistics; same-origin Admin APIs reuse
+the Worker flight-sync and statistics services; overlapping sync returns
+`SKIPPED_LOCKED`; recalculation requires explicit confirmation; and both actions
+write Admin audit records. The original full T-023 and T-024 tasks remain open
+for their non-launch scope.
+
+`T-021/T-022 — Public UI` is verified. The server-rendered dashboard presents
+cancellation information before punctuality, explicit COMPLETE/DEGRADED
+quality, freshness, N/A values and empty states. Public detail, history and
+cancellation routes preserve service-date/direction identity and return 404 for
+missing flights. Semantic tables, visible focus styles and mobile-contained
+overflow are implemented. Browser-backed public T-026 acceptance remains
+queued for an environment with persistent PostgreSQL and Chromium.
 
 `T-020 — Read API 與查詢層` is verified.
 It validates dates, flight numbers, directions and bounded pagination; uses
@@ -108,8 +120,8 @@ direction with `STATUS_CONFLICT`.
 
 The same use case powers the validated manual CLI and the startup/five-minute
 scheduler. Timer failures are logged without stopping later ticks. Shutdown
-signals stop new scheduling. The protected Admin trigger remains T-023 scope;
-heartbeat, registry, and recovery coordination remain T-027 scope.
+signals stop new scheduling. The protected Admin trigger now reuses this same
+composition; heartbeat, registry, and recovery coordination remain T-027 scope.
 
 T-004 uses Argon2id for password hashes. Successful login creates a random 256-bit raw token, stores only its SHA-256 hash, and sends the raw value in an eight-hour `__Host-` cookie with `HttpOnly`, `Secure`, `SameSite=Strict` and root path. Logout atomically revokes the matching session; expired, revoked or inactive-admin sessions cannot authenticate. Login capacity is reserved atomically under PostgreSQL advisory locks before Argon2 verification, with a five-attempt rolling 15-minute limit applied to both account and source. Forwarded IP headers are ignored unless a trusted ingress is explicitly configured. Admin pages and `/api/admin/*` are protected by the Next.js proxy except the login endpoint.
 
@@ -128,12 +140,25 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- T-021/T-022 targeted verification passes: Web 33 tests and production build
-  with 11 routes.
+- T-023/T-024 launch-slice targeted verification passes: Web 43 tests and a
+  production build exposing the protected operational pages and two Admin APIs.
 - `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
-  passes through split forced gates: formatting, all 6 package
-  lint/typecheck/build tasks, and 238 tests (Shared 15, Flight Source 35,
-  Domain 62, DB 51, Worker 42, Web 33).
+  passes in one uninterrupted run: formatting, all 6 package
+  lint/typecheck/build tasks, and 248 tests (Shared 15, Flight Source 35,
+  Domain 62, DB 51, Worker 42, Web 43).
+
+### T-023/T-024 — Launch-Critical Admin Operations Slice
+
+- Commit: `feat(admin): add launch-critical flight operations`
+- Verification: Web 43 tests; production Next build exposes Admin flights,
+  scrape-runs and statistics pages plus manual sync/recalculation APIs; forced
+  repository verification passes all 248 tests and all 6 package gates.
+- Decisions: Admin HTTP actions require both a valid session and strict
+  same-origin request; Web composes the existing Worker services instead of
+  duplicating sync or settlement logic; manual recalculation requires
+  `{ confirmed: true }`; every accepted operation is audited.
+- Follow-up: implement the T-027/T-028 launch slice. Full T-023/T-024 remains
+  open for the deferred P0 Admin scope.
 
 ### T-021/T-022 — Public Dashboard and Flight Pages
 
@@ -215,9 +240,10 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Run browser-backed public T-026 responsive acceptance, then implement minimum
-Admin operations.
+Implement the T-027/T-028 launch slice: startup recovery, heartbeat and a
+verified backup/restore path. Run browser-backed public T-026 acceptance when a
+persistent PostgreSQL and Chromium environment is available.
 
 ```text
-feat(web): ship public flight dashboard and history
+feat(admin): add launch-critical flight operations
 ```

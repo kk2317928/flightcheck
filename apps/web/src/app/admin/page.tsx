@@ -1,8 +1,17 @@
+import Link from 'next/link';
 export default function AdminPage() {
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-semibold">FlightCheck Admin</h1>
-      <p className="mt-2">管理員 Session 已驗證。Dashboard 將於 T-023 實作。</p>
+    <main className="page-shell">
+      <p className="eyebrow">FLIGHTCHECK ADMIN</p>
+      <h1>營運控制台</h1>
+      <p className="lede">
+        檢查航班、來源同步與每日統計，必要時執行受保護的人工操作。
+      </p>
+      <nav aria-label="管理功能">
+        <Link href="/admin/flights">航班管理</Link>
+        <Link href="/admin/scrape-runs">同步狀態</Link>
+        <Link href="/admin/statistics">每日統計</Link>
+      </nav>
     </main>
   );
 }
