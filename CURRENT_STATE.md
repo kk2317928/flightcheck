@@ -8,7 +8,7 @@
 
 CP-02 implementation is complete through T-010, its automated gate is green,
 and annotated tag `cp-02-flight-engine` points to the verified checkpoint commit.
-The approved First Release Fast Track has completed FR-01 and proceeds to FR-02/T-020. It targets a
+The approved First Release Fast Track has completed T-020 through T-022 and proceeds to the remaining FR-02 responsive acceptance. It targets a
 production-safe public release before the deferred SNS and complete Admin scope;
 the original T-001–T-032 P0 backlog remains authoritative.
 
@@ -70,7 +70,14 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-021/T-022 — Public UI` is next. `T-020 — Read API 與查詢層` is verified.
+`Public T-026 responsive acceptance` is next. `T-021/T-022 — Public UI` is
+verified. The server-rendered dashboard presents cancellation information
+before punctuality, explicit COMPLETE/DEGRADED quality, freshness, N/A values
+and empty states. Public detail, history and cancellation routes preserve
+service-date/direction identity and return 404 for missing flights. Semantic
+tables, visible focus styles and mobile-contained overflow are implemented.
+
+`T-020 — Read API 與查詢層` is verified.
 It validates dates, flight numbers, directions and bounded pagination; uses
 stable `(scheduledAt, id)` ordering; and exposes public-safe DTOs.
 
@@ -121,10 +128,24 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- T-020 targeted verification passes: DB 51 tests and Web 29 tests.
+- T-021/T-022 targeted verification passes: Web 33 tests and production build
+  with 11 routes.
 - `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
-  passes: formatting, all 6 package lint/typecheck/build tasks, and 234 tests
-  (Shared 15, Flight Source 35, Domain 62, DB 51, Worker 42, Web 29).
+  passes through split forced gates: formatting, all 6 package
+  lint/typecheck/build tasks, and 238 tests (Shared 15, Flight Source 35,
+  Domain 62, DB 51, Worker 42, Web 33).
+
+### T-021/T-022 — Public Dashboard and Flight Pages
+
+- Commit: `feat(web): ship public flight dashboard and history`
+- Verification: Web 33 tests; production Next build exposes dashboard,
+  cancellations, details and history; forced repository tests passed 238 and
+  build passed 6/6.
+- Decisions: public pages are SSR; incomplete quality is never hidden; no-data
+  is distinct from zero; flight identity includes date and direction; tables
+  scroll inside their container on narrow screens.
+- Follow-up: run browser-backed public T-026 acceptance with PostgreSQL, then
+  implement minimum Admin operations.
 
 ### T-020 — Read API 與查詢層
 
@@ -194,8 +215,9 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Implement `T-021/T-022 — Public UI` using the approved Fast Track plan.
+Run browser-backed public T-026 responsive acceptance, then implement minimum
+Admin operations.
 
 ```text
-feat(api): add flight and statistics queries
+feat(web): ship public flight dashboard and history
 ```

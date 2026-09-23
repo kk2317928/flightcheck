@@ -85,8 +85,8 @@ Checkpoint gate:
 ## CP-05 — Public Site & Admin
 
 - [x] T-020 Read API 與查詢層
-- [ ] T-021 公開首頁
-- [ ] T-022 航班詳情、歷史與取消頁
+- [x] T-021 公開首頁
+- [x] T-022 航班詳情、歷史與取消頁
 - [ ] T-023 Admin Dashboard 與 Flights
 - [ ] T-024 Admin Statistics 與 Scraper
 - [ ] T-025 Admin Social、Templates 與 Settings

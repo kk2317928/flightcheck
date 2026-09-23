@@ -6,7 +6,7 @@ import {
   FlightDetailsQuerySchema,
   FlightListQuerySchema,
   ServiceDateSchema,
-} from './query-schema.js';
+} from './query-schema';
 
 function publicFlight(item: PublicFlightRecord) {
   return {
