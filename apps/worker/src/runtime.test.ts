@@ -14,8 +14,10 @@ describe('runWorkerStartup', () => {
     const stop = vi.fn();
     const disconnect = vi.fn(async () => undefined);
     const flightSyncService = { run: vi.fn() };
+    const statisticsService = { recalculate: vi.fn() };
     const createServices = vi.fn(() => ({
       flightSyncService,
+      statisticsService,
       prisma: { $disconnect: disconnect },
       logger: {},
     }));
@@ -26,10 +28,14 @@ describe('runWorkerStartup', () => {
     const runtime = runWorkerStartup((line) => lines.push(line), environment, {
       createServices,
       startScheduler,
+      startStatisticsScheduler: startScheduler,
     });
     expect(createServices).toHaveBeenCalledTimes(1);
     expect(startScheduler).toHaveBeenCalledWith(
       expect.objectContaining({ service: flightSyncService }),
+    );
+    expect(startScheduler).toHaveBeenCalledWith(
+      expect.objectContaining({ service: statisticsService }),
     );
     expect(JSON.parse(lines[0]!)).toMatchObject({
       level: 'info',
@@ -39,7 +45,7 @@ describe('runWorkerStartup', () => {
     });
     runtime.stop();
     runtime.stop();
-    expect(stop).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledTimes(2);
   });
 
   it('fails environment validation before composition', () => {

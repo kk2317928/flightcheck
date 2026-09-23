@@ -3,6 +3,7 @@ import {
   createFlightSyncRepository,
   createJobLockRepository,
   createPrismaClient,
+  createStatisticsRepository,
 } from '@flightcheck/db';
 import {
   MacauAirportFlightSource,
@@ -17,6 +18,7 @@ import {
 } from '@flightcheck/shared';
 
 import { createFlightSyncService } from './flight-sync.js';
+import { createStatisticsService } from './statistics-service.js';
 
 export interface WorkerCompositionOptions {
   source?: FlightSourceAdapter;
@@ -45,6 +47,10 @@ export function createWorkerServices(
     createOwnerId:
       options.createOwnerId ?? (() => createJobCorrelationId('flight-sync')),
   });
+  const statisticsService = createStatisticsService({
+    repository: createStatisticsRepository(prisma),
+    now,
+  });
 
-  return { prisma, flightSyncService, logger };
+  return { prisma, flightSyncService, statisticsService, logger };
 }

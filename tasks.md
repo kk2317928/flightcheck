@@ -40,14 +40,14 @@ Checkpoint gate:
 > track only the slices that block `first-release-v0.1.0`; an original Task is
 > complete only after all of its detailed acceptance criteria pass.
 
-- [-] FR-01 Truthful statistics — T-011 through T-013
+- [x] FR-01 Truthful statistics — T-011 through T-013
 - [ ] FR-02 Public product — T-020 through T-022 and public T-026 acceptance
 - [ ] FR-03 Minimum operations — launch-critical T-023, T-024, T-027 and T-028
 - [ ] FR-04 Deploy and release — T-031 and launch-critical T-032 smoke gate
 
 First-release gate:
 
-- [ ] Statistics, quality and settlement checkpoint passes
+- [x] Statistics, quality and settlement checkpoint passes
 - [ ] Public dashboard, flight details, history and cancellations are usable
 - [ ] Minimum Admin operations, restart recovery and backup/restore pass
 - [ ] Docker deployment and production smoke pass
@@ -57,13 +57,13 @@ First-release gate:
 
 - [x] T-011 Statistics Engine
 - [x] T-012 Data Quality 與 Monitoring Gap
-- [ ] T-013 Daily Settlement 與重算
+- [x] T-013 Daily Settlement 與重算
 
 Checkpoint gate:
 
-- [ ] Fixed dataset matches manual calculations
-- [ ] Acceptance C01–C12 passes
-- [ ] Fake-clock boundaries at 23:30, 00:05 and 06:00 pass
+- [x] Fixed dataset matches manual calculations
+- [x] Acceptance C01–C12 passes
+- [x] Fake-clock boundaries at 23:30, 00:05 and 06:00 pass
 - [ ] Tag `cp-03-statistics`
 
 ## CP-04 — SNS Pipeline

@@ -8,7 +8,7 @@
 
 CP-02 implementation is complete through T-010, its automated gate is green,
 and annotated tag `cp-02-flight-engine` points to the verified checkpoint commit.
-The approved First Release Fast Track is active at FR-01/T-011. It targets a
+The approved First Release Fast Track has completed FR-01 and proceeds to FR-02/T-020. It targets a
 production-safe public release before the deferred SNS and complete Admin scope;
 the original T-001–T-032 P0 backlog remains authoritative.
 
@@ -61,15 +61,23 @@ The repository began with documentation only. It now contains:
 | T-010 Flight sync Worker            | Complete                       | Global lease, directional runs, stale re-evaluation, CLI and five-minute scheduler     |
 | T-011 Statistics engine             | Complete                       | Pure full-dataset aggregation, truthful denominators and null zero-denominator rates   |
 | T-012 Data quality                  | Complete                       | Direction coverage, freshness and critical-warning reasons with conservative watermark |
+| T-013 Daily settlement              | Complete                       | Atomic upsert, FINAL protection, quality-aware settlement and Macau-time scheduler      |
 
 ## Active Checkpoint
 
-`FR-01 — Truthful statistics`
+`FR-02 — Public product`
 
 ## Active Task
 
-`T-013 — Daily Settlement 與重算` is next. `T-012 — Data Quality 與 Monitoring
-Gap` is verified. It requires both source directions, applies an explicit
+`T-020 — Read API 與查詢層` is next. `T-013 — Daily Settlement 與重算` is
+verified. It persists full-day recalculations by service date, protects FINAL
+rows from ordinary scheduled downgrade, and runs at 23:30, 00:05, hourly
+through 05:05, and the 06:00 deadline in Macau time. COMPLETE determined data
+settles FINAL from 00:05; unresolved data remains PRELIMINARY until the deadline,
+then settles FINAL_WITH_WARNINGS. Timer failures are isolated and a process
+restart safely reruns the same upsert.
+
+`T-012 — Data Quality 與 Monitoring Gap` is verified. It requires both source directions, applies an explicit
 freshness limit, aggregates warning evidence and reports stable degradation
 reason codes. The combined `lastSuccessfulAt` is the older direction watermark.
 
@@ -108,11 +116,23 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- T-012 targeted verification passes: Flight Source 35 tests, Domain 62 tests,
-  DB 46 tests, and Worker 30 tests.
+- T-013 targeted verification passes: Domain 62 tests, DB 49 tests, and Worker
+  42 tests.
 - `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
-  passes: formatting, all 6 package lint/typecheck/build tasks, and 215 tests
-  (Shared 15, Flight Source 35, Domain 62, DB 46, Worker 30, Web 27).
+  passes: formatting, all 6 package lint/typecheck/build tasks, and 230 tests
+  (Shared 15, Flight Source 35, Domain 62, DB 49, Worker 42, Web 27).
+
+### T-013 — Daily Settlement 與重算
+
+- Commit: `feat(statistics): add daily settlement workflow`
+- Verification: Domain 62, DB 49 and Worker 42 tests passed; fresh forced
+  verification passed 230 tests plus all 6 package lint/typecheck/build tasks.
+- Decisions: data quality is evaluated against the 23:30 cutoff evidence;
+  COMPLETE and fully determined data may settle FINAL from 00:05; incomplete
+  data remains PRELIMINARY until 06:00 then settles FINAL_WITH_WARNINGS; only an
+  explicit manual FINAL may replace an existing FINAL.
+- Follow-up: create checkpoint tag `cp-03-statistics`, then implement T-020 read
+  API and query layer for FR-02.
 
 ### T-012 — Data Quality 與 Monitoring Gap
 
@@ -161,8 +181,9 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Implement `T-013 — Daily Settlement 與重算` using the approved Fast Track plan.
+Create annotated tag `cp-03-statistics` at the T-013 commit, then implement
+`T-020 — Read API 與查詢層` using the approved Fast Track plan.
 
 ```text
-feat(worker): add resilient flight sync job
+feat(statistics): add daily settlement workflow
 ```

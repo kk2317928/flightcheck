@@ -8,6 +8,11 @@ import { createWorkerServices } from './composition.js';
 import { getWorkerHealth } from './health.js';
 import { startFlightSyncScheduler } from './scheduler.js';
 import type { FlightSyncService } from './flight-sync.js';
+import {
+  startStatisticsScheduler,
+  type StatisticsScheduler,
+} from './statistics-scheduler.js';
+import type { StatisticsService } from './statistics-service.js';
 
 export interface WorkerRuntime {
   stop(): void;
@@ -20,9 +25,11 @@ interface RuntimeOverrides {
     options: { logger: StructuredLogger; now: () => Date },
   ) => {
     flightSyncService: FlightSyncService;
+    statisticsService: StatisticsService;
     prisma: { $disconnect(): Promise<void> };
   };
   startScheduler?: typeof startFlightSyncScheduler;
+  startStatisticsScheduler?: typeof startStatisticsScheduler;
   now?: () => Date;
 }
 
@@ -47,12 +54,20 @@ export function runWorkerStartup(
     now,
     logger,
   });
+  const statisticsScheduler: StatisticsScheduler = (
+    overrides.startStatisticsScheduler ?? startStatisticsScheduler
+  )({
+    service: services.statisticsService,
+    now,
+    logger,
+  });
   let stopped = false;
   let shutdownPromise: Promise<void> | undefined;
   const stop = () => {
     if (!stopped) {
       stopped = true;
       scheduler.stop();
+      statisticsScheduler.stop();
     }
   };
   return {
@@ -60,9 +75,10 @@ export function runWorkerStartup(
     disconnect: () => services.prisma.$disconnect(),
     shutdown() {
       stop();
-      shutdownPromise ??= scheduler
-        .waitForIdle()
-        .then(() => services.prisma.$disconnect());
+      shutdownPromise ??= Promise.all([
+        scheduler.waitForIdle(),
+        statisticsScheduler.waitForIdle(),
+      ]).then(() => services.prisma.$disconnect());
       return shutdownPromise;
     },
   };

@@ -35,4 +35,13 @@ export type {
   JobLockRepository,
 } from './job-lock-repository.js';
 export { seedDatabase } from './seed.js';
+export { createStatisticsRepository } from './statistics-repository.js';
+export type {
+  LoadStatisticsSourceInput,
+  SaveDailyStatisticInput,
+  StatisticsFlightRecord,
+  StatisticsRepository,
+  StatisticsSourceData,
+  StatisticsSourceRun,
+} from './statistics-repository.js';
 export * from './generated/prisma/client.js';
