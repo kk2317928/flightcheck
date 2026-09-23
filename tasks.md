@@ -32,7 +32,7 @@ Checkpoint gate:
 - [x] Acceptance A01–A12 and B01–B12 pass
 - [x] Two fixture syncs prove CANCEL_PENDING → CANCELLED
 - [x] Replaying identical data creates no duplicate instance/snapshot
-- [!] Tag `cp-02-flight-engine` — current GitHub connector cannot create tags
+- [x] Tag `cp-02-flight-engine`
 
 ## First Release Fast Track
 
@@ -40,7 +40,7 @@ Checkpoint gate:
 > track only the slices that block `first-release-v0.1.0`; an original Task is
 > complete only after all of its detailed acceptance criteria pass.
 
-- [!] FR-01 Truthful statistics — waiting for the required CP-02 tag
+- [-] FR-01 Truthful statistics — T-011 through T-013
 - [ ] FR-02 Public product — T-020 through T-022 and public T-026 acceptance
 - [ ] FR-03 Minimum operations — launch-critical T-023, T-024, T-027 and T-028
 - [ ] FR-04 Deploy and release — T-031 and launch-critical T-032 smoke gate
