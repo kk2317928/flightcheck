@@ -1,5 +1,9 @@
 # FlightCheck Production Deployment
 
+For the approved Vercel Web + separate Worker setup, follow
+[`vercel-worker.md`](./vercel-worker.md). The Compose instructions below deploy
+all components on one VPS.
+
 ## Boundary and prerequisites
 
 Use a Linux VPS with Docker Engine and the Compose plugin. Only Web binds to

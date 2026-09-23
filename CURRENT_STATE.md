@@ -87,6 +87,18 @@ image rollback without reversing migrations. Docker is unavailable in this
 managed runtime, so `docker compose config/build` and a clean VPS rehearsal
 remain explicit blockers.
 
+The approved Vercel Web + independent Worker option now has
+`compose.worker.yaml`, a private-environment template and
+`docs/operations/vercel-worker.md`. It reuses the existing migration, scheduler,
+heartbeat and backup images against an external PostgreSQL database; the
+existing all-in-one Compose file remains available. Static Compose contract and
+Prettier pass locally. The existing Vercel project has a READY protected Preview
+at commit `3670d83`, `/api/health` returned 200, and GitHub CI run
+`35874430176` succeeded. None of these checks proves a live data sync or
+shared database identity. Next: obtain the Worker Docker host and external
+PostgreSQL connection settings, run migration/Worker and real restore drill,
+then check preview flight data and Admin before promoting to Production.
+
 `T-027/T-028 launch slice` is implemented and its automated gates are green.
 Worker startup now clears expired leases, performs one immediate idempotent
 sync, recalculates yesterday when it is not FINAL, then starts heartbeat and
