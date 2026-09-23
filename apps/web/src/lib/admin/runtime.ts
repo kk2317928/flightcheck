@@ -3,10 +3,13 @@ import { createWorkerServices } from '@flightcheck/worker/composition';
 import { getSessionCookie } from '../auth/http';
 import { getAuthService } from '../auth/runtime';
 import { createAdminOperations } from './operations';
+import { normalizeWebRuntimeEnvironment } from '../runtime-env';
 
 let runtime: ReturnType<typeof buildRuntime> | undefined;
 function buildRuntime() {
-  const services = createWorkerServices(process.env);
+  const services = createWorkerServices(
+    normalizeWebRuntimeEnvironment(process.env),
+  );
   const operations = createAdminOperations({
     flightSync: services.flightSyncService,
     statistics: services.statisticsService,

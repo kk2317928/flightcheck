@@ -87,17 +87,20 @@ image rollback without reversing migrations. Docker is unavailable in this
 managed runtime, so `docker compose config/build` and a clean VPS rehearsal
 remain explicit blockers.
 
-The approved Vercel Web + independent Worker option now has
-`compose.worker.yaml`, a private-environment template and
-`docs/operations/vercel-worker.md`. It reuses the existing migration, scheduler,
-heartbeat and backup images against an external PostgreSQL database; the
-existing all-in-one Compose file remains available. Static Compose contract and
-Prettier pass locally. The existing Vercel project has a READY protected Preview
-at commit `3670d83`, `/api/health` returned 200, and GitHub CI run
-`35874430176` succeeded. None of these checks proves a live data sync or
-shared database identity. Next: obtain the Worker Docker host and external
-PostgreSQL connection settings, run migration/Worker and real restore drill,
-then check preview flight data and Admin before promoting to Production.
+The first-release deployment decision is now **all on Vercel**, superseding the
+independent Worker-host proposal. The Web project will invoke the existing
+flight-sync and statistics services in a five-minute authenticated Vercel Cron
+function. It reuses the database lease and recalculates the Macau service day
+on every tick, then yesterday from 00:05 through 07:00. Docker packaging
+remains an alternative in the original T-031 backlog, not the first-release
+dependency. `docs/operations/vercel.md` defines migrations, encrypted
+`DATABASE_URL`/`CRON_SECRET`, production activation and acceptance. Next: verify
+the Cron commit in CI and Preview, configure Production secrets and migrated
+PostgreSQL, then deploy Production and inspect actual NX sync/statistics.
+Vercel project settings currently show a Hobby team and Neon `DATABASE_URL`
+for Production/Preview, but no `CRON_SECRET`. Hobby rejects five-minute Cron
+schedules; the account must support minute-level Cron before production
+activation. No subscription upgrade or credential creation has been performed.
 
 `T-027/T-028 launch slice` is implemented and its automated gates are green.
 Worker startup now clears expired leases, performs one immediate idempotent

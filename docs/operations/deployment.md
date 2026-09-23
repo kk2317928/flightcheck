@@ -1,8 +1,7 @@
 # FlightCheck Production Deployment
 
-For the approved Vercel Web + separate Worker setup, follow
-[`vercel-worker.md`](./vercel-worker.md). The Compose instructions below deploy
-all components on one VPS.
+For the Vercel-only first release, use [`vercel.md`](./vercel.md). The Compose
+instructions below describe the alternative all-on-one-host deployment.
 
 ## Boundary and prerequisites
 

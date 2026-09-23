@@ -1,6 +1,5 @@
 .env
 .env.local
-.env.worker
 .next/
 .superpowers/
 .turbo/
