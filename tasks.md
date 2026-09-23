@@ -56,7 +56,7 @@ First-release gate:
 ## CP-03 — Statistics
 
 - [x] T-011 Statistics Engine
-- [ ] T-012 Data Quality 與 Monitoring Gap
+- [x] T-012 Data Quality 與 Monitoring Gap
 - [ ] T-013 Daily Settlement 與重算
 
 Checkpoint gate:

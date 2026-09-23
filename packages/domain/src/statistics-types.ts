@@ -32,3 +32,38 @@ export interface DailyStatisticsResult {
   onTimeRate: number | null;
   averageDelayMinutes: number | null;
 }
+
+export type DataQuality = 'COMPLETE' | 'DEGRADED';
+
+export type DataQualityReason =
+  | 'MISSING_DEPARTURES'
+  | 'MISSING_ARRIVALS'
+  | 'STALE_DEPARTURES'
+  | 'STALE_ARRIVALS'
+  | 'CRITICAL_WARNING';
+
+export interface DataQualitySourceEvidence {
+  lastSuccessfulAt: Date;
+  warningCount: number;
+  criticalWarningCount: number;
+}
+
+export interface DataQualityInput {
+  evaluatedAt: Date;
+  cutoffAt: Date;
+  maxAgeMinutes: number;
+  departures: DataQualitySourceEvidence | null;
+  arrivals: DataQualitySourceEvidence | null;
+}
+
+export interface DataQualityResult {
+  quality: DataQuality;
+  reasons: DataQualityReason[];
+  lastSuccessfulAt: Date | null;
+  warningSummary: {
+    total: number;
+    critical: number;
+  };
+  evaluatedAt: Date;
+  cutoffAt: Date;
+}
