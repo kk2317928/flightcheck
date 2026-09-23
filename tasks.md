@@ -45,7 +45,9 @@ Checkpoint gate:
 - [-] FR-03 Minimum operations — launch-critical T-023, T-024, T-027 and T-028
   - [x] T-023/T-024 launch slice — protected flight views, manual sync and confirmed statistics recalculation
   - [!] T-027/T-028 launch slice — implementation verified; real PostgreSQL restore drill awaits client tooling
-- [ ] FR-04 Deploy and release — T-031 and launch-critical T-032 smoke gate
+- [-] FR-04 Deploy and release — T-031 and launch-critical T-032 smoke gate
+  - [!] T-031 Docker packaging — configuration verified; image build/rehearsal awaits Docker host
+  - [ ] T-032 production smoke gate
 
 First-release gate:
 

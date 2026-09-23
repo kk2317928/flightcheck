@@ -67,12 +67,25 @@ The repository began with documentation only. It now contains:
 | T-020 Public read queries           | Complete                           | Validated filters, stable pagination and public-safe DTOs                              |
 | T-023/T-024 launch Admin slice      | Complete                           | Protected operational views, shared manual sync, confirmed recalculation and audit     |
 | T-027/T-028 launch reliability code | Implemented; restore drill blocked | Ordered recovery, persisted heartbeat and guarded pg_dump/pg_restore scripts           |
+| T-031 Docker production packaging   | Implemented; rehearsal blocked     | Separate non-root images, migration gate, health checks, volumes and rollback runbook  |
 
 ## Active Checkpoint
 
-`FR-03 — Minimum operations`
+`FR-04 — Deploy and release` (FR-02 browser and FR-03 restore drills remain external blockers)
 
 ## Active Task
+
+`T-031 — Docker production deployment` is implemented. The Compose topology
+contains separate Web and Worker images, PostgreSQL 17, a migration/seed job,
+named database and backup volumes, internal database networking, application
+health checks and `unless-stopped` restart policies. Both application runtimes
+run as the non-root `node` user; only Web binds to host loopback for a host-level
+TLS proxy. Worker and migration images include PostgreSQL clients, enabling the
+pending real T-028 restore drill on a Docker host. Deployment and rollback
+runbooks cover first install, Admin bootstrap, backups, independent upgrades and
+image rollback without reversing migrations. Docker is unavailable in this
+managed runtime, so `docker compose config/build` and a clean VPS rehearsal
+remain explicit blockers.
 
 `T-027/T-028 launch slice` is implemented and its automated gates are green.
 Worker startup now clears expired leases, performs one immediate idempotent
@@ -152,6 +165,10 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
 - T-027/T-028 targeted verification passes: Worker 47 tests, Worker build, Bash
   syntax validation and the guarded backup/restore command-contract drill.
+- T-031 static deployment verification passes: Compose parses successfully,
+  required services/dependencies/volumes/networks are asserted, both runtime
+  Dockerfiles are non-root and pinned to Node 22.20.0, and migration scripts pass
+  Bash syntax validation. Docker image build was not available in this runtime.
 - `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
   passes in one uninterrupted run: formatting, all 6 package
   lint/typecheck/build tasks, and 253 tests (Shared 15, Flight Source 35,
@@ -172,6 +189,22 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
   slice can be marked complete.
 - Follow-up: package T-031 Docker deployment with PostgreSQL client tooling,
   then execute the real restore drill and clear the blocker.
+
+### T-031 — Docker Production Deployment
+
+- Commit: `ops: add first-release docker deployment`
+- Verification: static Compose contract and Bash syntax pass; forced repository
+  verification passes 253 tests and all 6 package gates.
+- Decisions: PostgreSQL stays on an internal-only network; Web binds only to
+  loopback behind an external TLS proxy; migration completion gates both apps;
+  app runtimes are non-root/read-only; `.env` values are injected per service
+  instead of exposing the full file to every container; rollback changes image
+  tags and never reverses migrations.
+- Blocker: Docker is not installed in this runtime, so actual `docker compose
+config`, image builds, container health and clean-host rehearsal remain
+  unverified.
+- Follow-up: run the T-031 rehearsal and T-028 restore drill on a Docker host,
+  then execute T-032 production smoke.
 
 ### T-023/T-024 — Launch-Critical Admin Operations Slice
 
@@ -266,14 +299,15 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 - The backup/restore safety contract is verified, but a real custom-format
   restore drill is pending because this runtime has no `pg_dump`, `pg_restore`,
   `psql` or Docker.
+- Docker configuration is parser-verified, but images and container health have
+  not run because Docker is unavailable in this managed runtime.
 
 ## Next Exact Action
 
-Implement T-031 Docker deployment with PostgreSQL client tooling, then run the
-real backup/restore count drill to clear the T-028 launch blocker. Run
-browser-backed public T-026 acceptance when persistent PostgreSQL and Chromium
-are available.
+On a Docker host, build and start T-031, run the real backup/restore count drill
+to clear T-028, then execute T-032 production smoke. Run browser-backed public
+T-026 acceptance when persistent PostgreSQL and Chromium are available.
 
 ```text
-feat(ops): add startup recovery and database recovery
+ops: add first-release docker deployment
 ```
