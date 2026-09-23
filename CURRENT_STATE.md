@@ -43,22 +43,23 @@ The repository began with documentation only. It now contains:
 
 ## Completed Work
 
-| Item                                | Status                         | Evidence                                                                            |
-| ----------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
-| P0 v1.2 scope specification         | Complete                       | `docs/P0_v1.2.md`; commit `3d36fe66d7ab333c01accd208c59a5475f0c1171`                |
-| Initial implementation backlog      | Superseded by expanded backlog | commit `d87bc1446daad55b0aa0bc0a2bee4cc8bdae34b1`                                   |
-| Expanded T-001–T-032 plan           | Complete                       | `docs/IMPLEMENTATION_TASKS.md`; commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`   |
-| Persistent context/checkpoint files | Complete                       | `AGENTS.md`, `CURRENT_STATE.md`, `tasks.md`                                         |
-| T-001 engineering baseline          | Complete                       | Web/Worker workspace, health tests, CI and full verification in this Task commit    |
-| T-002 config and observability      | Complete                       | Zod env validation, Macau time helpers, correlation IDs and redacted JSON logging   |
-| T-003 PostgreSQL／Prisma schema     | Complete                       | 15 P0 models, initial migration, constraints, client factory and idempotent seed    |
-| T-004 Admin authentication          | Complete                       | Argon2id, hashed sessions, hardened cookies, rate limit, proxy guard and audit      |
-| T-005 Flight source contracts       | Complete                       | Adapter, raw/normalized schemas, warnings and discriminated fetch results           |
-| T-006 Macau Airport HTTP client     | Complete                       | Official board URLs, timeout/retry policy, source timestamps and sanitized fixtures |
-| T-007 Macau Airport parser          | Complete                       | NX filtering, IATA/status/time normalization, warnings, deduplication and adapter   |
-| T-008 Flight persistence            | Complete                       | Atomic upserts, changed-only snapshots, warning storage and guarded status history  |
-| T-009 Status engine                 | Complete                       | Pure status policy, cancellation confirmation, terminal protection and full CAS     |
-| T-010 Flight sync Worker            | Complete                       | Global lease, directional runs, stale re-evaluation, CLI and five-minute scheduler  |
+| Item                                | Status                         | Evidence                                                                             |
+| ----------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------ |
+| P0 v1.2 scope specification         | Complete                       | `docs/P0_v1.2.md`; commit `3d36fe66d7ab333c01accd208c59a5475f0c1171`                 |
+| Initial implementation backlog      | Superseded by expanded backlog | commit `d87bc1446daad55b0aa0bc0a2bee4cc8bdae34b1`                                    |
+| Expanded T-001–T-032 plan           | Complete                       | `docs/IMPLEMENTATION_TASKS.md`; commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`    |
+| Persistent context/checkpoint files | Complete                       | `AGENTS.md`, `CURRENT_STATE.md`, `tasks.md`                                          |
+| T-001 engineering baseline          | Complete                       | Web/Worker workspace, health tests, CI and full verification in this Task commit     |
+| T-002 config and observability      | Complete                       | Zod env validation, Macau time helpers, correlation IDs and redacted JSON logging    |
+| T-003 PostgreSQL／Prisma schema     | Complete                       | 15 P0 models, initial migration, constraints, client factory and idempotent seed     |
+| T-004 Admin authentication          | Complete                       | Argon2id, hashed sessions, hardened cookies, rate limit, proxy guard and audit       |
+| T-005 Flight source contracts       | Complete                       | Adapter, raw/normalized schemas, warnings and discriminated fetch results            |
+| T-006 Macau Airport HTTP client     | Complete                       | Official board URLs, timeout/retry policy, source timestamps and sanitized fixtures  |
+| T-007 Macau Airport parser          | Complete                       | NX filtering, IATA/status/time normalization, warnings, deduplication and adapter    |
+| T-008 Flight persistence            | Complete                       | Atomic upserts, changed-only snapshots, warning storage and guarded status history   |
+| T-009 Status engine                 | Complete                       | Pure status policy, cancellation confirmation, terminal protection and full CAS      |
+| T-010 Flight sync Worker            | Complete                       | Global lease, directional runs, stale re-evaluation, CLI and five-minute scheduler   |
+| T-011 Statistics engine             | Complete                       | Pure full-dataset aggregation, truthful denominators and null zero-denominator rates |
 
 ## Active Checkpoint
 
@@ -66,8 +67,12 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-011 — Statistics Engine` is next. `T-010 — Flight Sync Use Case 與 Worker`
-is verified. One reusable Worker
+`T-012 — Data Quality 與 Monitoring Gap` is next. `T-011 — Statistics Engine`
+is verified. It recalculates daily totals from complete input collections,
+separates direction and determined/pending counts, counts operational
+cancellations independently, and returns null rates when no denominator exists.
+
+`T-010 — Flight Sync Use Case 與 Worker` is verified. One reusable Worker
 service performs separate concurrent departure/arrival calls under the global
 `flight-sync` lease. Each direction owns its ScrapeRun and commits independently;
 FAILED source results never persist observations, while usable PARTIAL results,
@@ -98,11 +103,21 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- T-010 targeted verification passes: Flight Source 35 tests, Domain 53 tests,
+- T-011 targeted verification passes: Flight Source 35 tests, Domain 56 tests,
   DB 46 tests, and Worker 30 tests.
 - `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
-  passes: formatting, all 6 package lint/typecheck/build tasks, and 206 tests
-  (Shared 15, Flight Source 35, Domain 53, DB 46, Worker 30, Web 27).
+  passes: formatting, all 6 package lint/typecheck/build tasks, and 209 tests
+  (Shared 15, Flight Source 35, Domain 56, DB 46, Worker 30, Web 27).
+
+### T-011 — Statistics Engine
+
+- Commit: `feat(statistics): implement daily aggregation engine`
+- Verification: Domain 56 tests passed; fresh `pnpm verify` → 209 tests and all
+  6 package lint/typecheck/build tasks passed.
+- Decisions: recompute from the supplied complete FlightInstance dataset;
+  cancellation remains in total; PENDING and UNKNOWN performance are excluded
+  from punctuality; zero denominators return null.
+- Follow-up: implement T-012 data-quality and monitoring-gap evaluation.
 
 ### T-010 — Flight Sync Use Case 與 Worker
 
@@ -131,7 +146,8 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Implement `T-011 — Statistics Engine` using the approved Fast Track plan.
+Implement `T-012 — Data Quality 與 Monitoring Gap` using the approved Fast Track
+plan.
 
 ```text
 feat(worker): add resilient flight sync job

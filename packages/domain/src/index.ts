@@ -1,4 +1,11 @@
 export { applyFlightStatusObservation } from './flight-status-engine.js';
+export { aggregateDailyStatistics } from './daily-statistics.js';
+export type {
+  DailyStatisticsFlight,
+  DailyStatisticsInput,
+  DailyStatisticsResult,
+  StatisticsFlightDirection,
+} from './statistics-types.js';
 export type {
   ApplyFlightStatusObservationInput,
   FlightStatusDecision,

@@ -55,7 +55,7 @@ First-release gate:
 
 ## CP-03 — Statistics
 
-- [ ] T-011 Statistics Engine
+- [x] T-011 Statistics Engine
 - [ ] T-012 Data Quality 與 Monitoring Gap
 - [ ] T-013 Daily Settlement 與重算
 
