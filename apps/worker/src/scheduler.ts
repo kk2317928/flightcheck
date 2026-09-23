@@ -11,6 +11,7 @@ export interface FlightSyncSchedulerDependencies {
     error(event: string, context?: Record<string, unknown>): void;
     info(event: string, context?: Record<string, unknown>): void;
   };
+  runOnStart?: boolean;
 }
 
 export interface FlightSyncScheduler {
@@ -51,7 +52,7 @@ export function startFlightSyncScheduler(
     activeRuns.add(task);
   }
 
-  dispatch('STARTUP');
+  if (dependencies.runOnStart !== false) dispatch('STARTUP');
   const interval = setInterval(() => dispatch('SCHEDULED'), FIVE_MINUTES_MS);
 
   return {

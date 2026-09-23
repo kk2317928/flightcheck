@@ -9,8 +9,9 @@ const environment = {
 };
 
 describe('runWorkerStartup', () => {
-  it('validates, composes, logs readiness, and starts scheduling', () => {
+  it('recovers before heartbeat and scheduling start', async () => {
     const lines: string[] = [];
+    const events: string[] = [];
     const stop = vi.fn();
     const disconnect = vi.fn(async () => undefined);
     const flightSyncService = { run: vi.fn() };
@@ -18,6 +19,12 @@ describe('runWorkerStartup', () => {
     const createServices = vi.fn(() => ({
       flightSyncService,
       statisticsService,
+      recoveryStore: {
+        clearExpiredLocks: vi.fn(async () => 0),
+        getDailyStatisticStatus: vi.fn(async () => 'FINAL' as const),
+      },
+      heartbeatStore: { record: vi.fn(async () => undefined) },
+      heartbeatOwnerId: 'worker-1',
       prisma: { $disconnect: disconnect },
       logger: {},
     }));
@@ -25,14 +32,42 @@ describe('runWorkerStartup', () => {
       stop,
       waitForIdle: vi.fn(async () => undefined),
     }));
-    const runtime = runWorkerStartup((line) => lines.push(line), environment, {
-      createServices,
-      startScheduler,
-      startStatisticsScheduler: startScheduler,
+    const runRecovery = vi.fn(async () => {
+      events.push('recovery');
+      return {
+        clearedLocks: 0,
+        syncStatus: 'SUCCESS',
+        statisticsRecovered: false,
+      };
     });
+    const startHeartbeat = vi.fn(() => {
+      events.push('heartbeat');
+      return {
+        stop: vi.fn(),
+        waitForIdle: vi.fn(async () => undefined),
+      };
+    });
+    startScheduler.mockImplementation(() => {
+      events.push('scheduler');
+      return { stop, waitForIdle: vi.fn(async () => undefined) };
+    });
+    const runtime = await runWorkerStartup(
+      (line) => lines.push(line),
+      environment,
+      {
+        createServices,
+        startScheduler,
+        startStatisticsScheduler: startScheduler,
+        runRecovery,
+        startHeartbeat,
+      },
+    );
     expect(createServices).toHaveBeenCalledTimes(1);
     expect(startScheduler).toHaveBeenCalledWith(
-      expect.objectContaining({ service: flightSyncService }),
+      expect.objectContaining({
+        service: flightSyncService,
+        runOnStart: false,
+      }),
     );
     expect(startScheduler).toHaveBeenCalledWith(
       expect.objectContaining({ service: statisticsService }),
@@ -43,16 +78,17 @@ describe('runWorkerStartup', () => {
       event: 'worker.ready',
       health: { service: 'worker', status: 'ok' },
     });
+    expect(events).toEqual(['recovery', 'heartbeat', 'scheduler', 'scheduler']);
     runtime.stop();
     runtime.stop();
     expect(stop).toHaveBeenCalledTimes(2);
   });
 
-  it('fails environment validation before composition', () => {
+  it('fails environment validation before composition', async () => {
     const createServices = vi.fn();
-    expect(() =>
+    await expect(
       runWorkerStartup(() => undefined, {}, { createServices }),
-    ).toThrow(/TZ/);
+    ).rejects.toThrow(/TZ/);
     expect(createServices).not.toHaveBeenCalled();
   });
 

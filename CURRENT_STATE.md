@@ -45,27 +45,28 @@ The repository began with documentation only. It now contains:
 
 ## Completed Work
 
-| Item                                | Status                         | Evidence                                                                               |
-| ----------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------- |
-| P0 v1.2 scope specification         | Complete                       | `docs/P0_v1.2.md`; commit `3d36fe66d7ab333c01accd208c59a5475f0c1171`                   |
-| Initial implementation backlog      | Superseded by expanded backlog | commit `d87bc1446daad55b0aa0bc0a2bee4cc8bdae34b1`                                      |
-| Expanded T-001–T-032 plan           | Complete                       | `docs/IMPLEMENTATION_TASKS.md`; commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`      |
-| Persistent context/checkpoint files | Complete                       | `AGENTS.md`, `CURRENT_STATE.md`, `tasks.md`                                            |
-| T-001 engineering baseline          | Complete                       | Web/Worker workspace, health tests, CI and full verification in this Task commit       |
-| T-002 config and observability      | Complete                       | Zod env validation, Macau time helpers, correlation IDs and redacted JSON logging      |
-| T-003 PostgreSQL／Prisma schema     | Complete                       | 15 P0 models, initial migration, constraints, client factory and idempotent seed       |
-| T-004 Admin authentication          | Complete                       | Argon2id, hashed sessions, hardened cookies, rate limit, proxy guard and audit         |
-| T-005 Flight source contracts       | Complete                       | Adapter, raw/normalized schemas, warnings and discriminated fetch results              |
-| T-006 Macau Airport HTTP client     | Complete                       | Official board URLs, timeout/retry policy, source timestamps and sanitized fixtures    |
-| T-007 Macau Airport parser          | Complete                       | NX filtering, IATA/status/time normalization, warnings, deduplication and adapter      |
-| T-008 Flight persistence            | Complete                       | Atomic upserts, changed-only snapshots, warning storage and guarded status history     |
-| T-009 Status engine                 | Complete                       | Pure status policy, cancellation confirmation, terminal protection and full CAS        |
-| T-010 Flight sync Worker            | Complete                       | Global lease, directional runs, stale re-evaluation, CLI and five-minute scheduler     |
-| T-011 Statistics engine             | Complete                       | Pure full-dataset aggregation, truthful denominators and null zero-denominator rates   |
-| T-012 Data quality                  | Complete                       | Direction coverage, freshness and critical-warning reasons with conservative watermark |
-| T-013 Daily settlement              | Complete                       | Atomic upsert, FINAL protection, quality-aware settlement and Macau-time scheduler     |
-| T-020 Public read queries           | Complete                       | Validated filters, stable pagination and public-safe DTOs                              |
-| T-023/T-024 launch Admin slice      | Complete                       | Protected operational views, shared manual sync, confirmed recalculation and audit     |
+| Item                                | Status                             | Evidence                                                                               |
+| ----------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
+| P0 v1.2 scope specification         | Complete                           | `docs/P0_v1.2.md`; commit `3d36fe66d7ab333c01accd208c59a5475f0c1171`                   |
+| Initial implementation backlog      | Superseded by expanded backlog     | commit `d87bc1446daad55b0aa0bc0a2bee4cc8bdae34b1`                                      |
+| Expanded T-001–T-032 plan           | Complete                           | `docs/IMPLEMENTATION_TASKS.md`; commit `3dcb391ac9a90d0918bb3e0a94fcd0a64d1fb617`      |
+| Persistent context/checkpoint files | Complete                           | `AGENTS.md`, `CURRENT_STATE.md`, `tasks.md`                                            |
+| T-001 engineering baseline          | Complete                           | Web/Worker workspace, health tests, CI and full verification in this Task commit       |
+| T-002 config and observability      | Complete                           | Zod env validation, Macau time helpers, correlation IDs and redacted JSON logging      |
+| T-003 PostgreSQL／Prisma schema     | Complete                           | 15 P0 models, initial migration, constraints, client factory and idempotent seed       |
+| T-004 Admin authentication          | Complete                           | Argon2id, hashed sessions, hardened cookies, rate limit, proxy guard and audit         |
+| T-005 Flight source contracts       | Complete                           | Adapter, raw/normalized schemas, warnings and discriminated fetch results              |
+| T-006 Macau Airport HTTP client     | Complete                           | Official board URLs, timeout/retry policy, source timestamps and sanitized fixtures    |
+| T-007 Macau Airport parser          | Complete                           | NX filtering, IATA/status/time normalization, warnings, deduplication and adapter      |
+| T-008 Flight persistence            | Complete                           | Atomic upserts, changed-only snapshots, warning storage and guarded status history     |
+| T-009 Status engine                 | Complete                           | Pure status policy, cancellation confirmation, terminal protection and full CAS        |
+| T-010 Flight sync Worker            | Complete                           | Global lease, directional runs, stale re-evaluation, CLI and five-minute scheduler     |
+| T-011 Statistics engine             | Complete                           | Pure full-dataset aggregation, truthful denominators and null zero-denominator rates   |
+| T-012 Data quality                  | Complete                           | Direction coverage, freshness and critical-warning reasons with conservative watermark |
+| T-013 Daily settlement              | Complete                           | Atomic upsert, FINAL protection, quality-aware settlement and Macau-time scheduler     |
+| T-020 Public read queries           | Complete                           | Validated filters, stable pagination and public-safe DTOs                              |
+| T-023/T-024 launch Admin slice      | Complete                           | Protected operational views, shared manual sync, confirmed recalculation and audit     |
+| T-027/T-028 launch reliability code | Implemented; restore drill blocked | Ordered recovery, persisted heartbeat and guarded pg_dump/pg_restore scripts           |
 
 ## Active Checkpoint
 
@@ -73,8 +74,17 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-027/T-028 launch slice — restart recovery, heartbeat and backup/restore` is
-next. The T-023/T-024 launch slice is verified: protected Admin pages expose
+`T-027/T-028 launch slice` is implemented and its automated gates are green.
+Worker startup now clears expired leases, performs one immediate idempotent
+sync, recalculates yesterday when it is not FINAL, then starts heartbeat and
+schedulers. Each recovery action is failure-isolated. Heartbeat state is stored
+in `JobLock` every minute with a two-minute expiry and emitted as redacted
+structured health logs. Guarded `pg_dump`/`pg_restore` scripts and an operations
+runbook are present. The command-contract drill passes, but this runtime has no
+PostgreSQL client binaries or Docker, so the required real restore/count drill
+remains an explicit blocker rather than being reported as complete.
+
+The T-023/T-024 launch slice is verified: protected Admin pages expose
 recent flights, scrape runs and daily statistics; same-origin Admin APIs reuse
 the Worker flight-sync and statistics services; overlapping sync returns
 `SKIPPED_LOCKED`; recalculation requires explicit confirmation; and both actions
@@ -140,12 +150,28 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- T-023/T-024 launch-slice targeted verification passes: Web 43 tests and a
-  production build exposing the protected operational pages and two Admin APIs.
+- T-027/T-028 targeted verification passes: Worker 47 tests, Worker build, Bash
+  syntax validation and the guarded backup/restore command-contract drill.
 - `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
   passes in one uninterrupted run: formatting, all 6 package
-  lint/typecheck/build tasks, and 248 tests (Shared 15, Flight Source 35,
-  Domain 62, DB 51, Worker 42, Web 43).
+  lint/typecheck/build tasks, and 253 tests (Shared 15, Flight Source 35,
+  Domain 62, DB 51, Worker 47, Web 43).
+
+### T-027/T-028 — Launch Reliability Slice
+
+- Commit: `feat(ops): add startup recovery and database recovery`
+- Verification: Worker 47 tests; forced repository verification passes all 253
+  tests and all 6 package gates; backup/restore command contract passes.
+- Decisions: recovery is ordered before scheduler startup; individual recovery
+  failures do not suppress later safe actions; existing FINAL statistics are
+  not rewritten; heartbeat uses a renewable `JobLock` record; restore requires
+  `CONFIRM_RESTORE=flightcheck` and an explicit target URL.
+- Blocker: this managed environment provides neither PostgreSQL client binaries
+  nor Docker. The real source-to-empty-target restore and four-table count
+  comparison must run in T-031's deployment environment before this Fast Track
+  slice can be marked complete.
+- Follow-up: package T-031 Docker deployment with PostgreSQL client tooling,
+  then execute the real restore drill and clear the blocker.
 
 ### T-023/T-024 — Launch-Critical Admin Operations Slice
 
@@ -237,13 +263,17 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 - PGlite serializes transaction execution, so concurrency tests also assert conflict-safe emitted SQL and stale expected-state rejection; production PostgreSQL remains the final concurrency authority.
 - Threads/Facebook credentials and production authorization are not yet validated. They are not required before T-017/T-018.
 - Exact production VPS details are intentionally deferred to T-031.
+- The backup/restore safety contract is verified, but a real custom-format
+  restore drill is pending because this runtime has no `pg_dump`, `pg_restore`,
+  `psql` or Docker.
 
 ## Next Exact Action
 
-Implement the T-027/T-028 launch slice: startup recovery, heartbeat and a
-verified backup/restore path. Run browser-backed public T-026 acceptance when a
-persistent PostgreSQL and Chromium environment is available.
+Implement T-031 Docker deployment with PostgreSQL client tooling, then run the
+real backup/restore count drill to clear the T-028 launch blocker. Run
+browser-backed public T-026 acceptance when persistent PostgreSQL and Chromium
+are available.
 
 ```text
-feat(admin): add launch-critical flight operations
+feat(ops): add startup recovery and database recovery
 ```
