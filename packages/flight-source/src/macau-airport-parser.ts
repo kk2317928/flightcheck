@@ -13,6 +13,7 @@ export interface MacauAirportParseResult {
   flights: NormalizedFlight[];
   warnings: FlightSourceWarning[];
   serviceDates: string[];
+  rowCount: number;
 }
 
 interface ParsedStatus {
@@ -217,6 +218,7 @@ export function parseMacauAirportDocument(
   const seen = new Map<string, NormalizedFlight>();
   const conflicted = new Set<string>();
   const serviceDates = new Set<string>();
+  let rowCount = 0;
   const allRows = $('#flights-datatable > tbody > tr');
   const flightRows = $('#flights-datatable > tbody > tr.detail');
 
@@ -233,6 +235,7 @@ export function parseMacauAirportDocument(
     const serviceDate = cleanText(row.attr('data-flight-date') ?? '');
     if (macauInstant(serviceDate, '00:00')) serviceDates.add(serviceDate);
     if (requestedServiceDate && serviceDate !== requestedServiceDate) return;
+    rowCount += 1;
     const scheduledTime = cleanText($(cells[0]).text());
     const airportName = cleanText($(cells[2]).text());
     const flightNumber = cleanText($(cells[3]).text())
@@ -336,5 +339,10 @@ export function parseMacauAirportDocument(
     flights.push(flight);
   });
 
-  return { flights, warnings, serviceDates: [...serviceDates].sort() };
+  return {
+    flights,
+    warnings,
+    serviceDates: [...serviceDates].sort(),
+    rowCount,
+  };
 }

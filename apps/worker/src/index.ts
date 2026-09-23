@@ -1,7 +1,19 @@
-import { runWorkerStartup } from './runtime.js';
+import { pathToFileURL } from 'node:url';
+import {
+  installWorkerSignalHandlers,
+  runWorkerStartup,
+  type WorkerRuntime,
+} from './runtime.js';
 
-export function startWorker(): void {
-  runWorkerStartup();
+export async function startWorker(): Promise<WorkerRuntime> {
+  const runtime = await runWorkerStartup();
+  installWorkerSignalHandlers(runtime);
+  return runtime;
 }
 
-startWorker();
+const entryPath = process.argv[1];
+if (
+  entryPath !== undefined &&
+  import.meta.url === pathToFileURL(entryPath).href
+)
+  void startWorker();

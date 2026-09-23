@@ -36,6 +36,7 @@ describe('MacauAirportFlightSource', () => {
       status: 'FAILED',
       flights: [],
       warnings: [],
+      rowCount: 0,
       fetchedAt: now,
       sourceUpdatedAt: null,
       error: { code: 'TIMEOUT', message: 'timed out', retryable: true },
@@ -77,6 +78,7 @@ describe('MacauAirportFlightSource', () => {
     });
 
     expect(result.status).toBe('PARTIAL');
+    expect(result.rowCount).toBe(1);
     expect(result.flights).toHaveLength(1);
     expect(result.warnings.map(({ code }) => code)).toEqual([
       'UNKNOWN_AIRPORT',
@@ -112,6 +114,7 @@ describe('MacauAirportFlightSource', () => {
 
     expect(result.status).toBe('PARTIAL');
     expect(result.flights).toEqual([]);
+    expect(result.rowCount).toBe(0);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]?.code).toBe('SOURCE_PARTIAL');
     expect(result.warnings[0]?.details?.serviceDate).toBe('2026-09-22');

@@ -25,26 +25,49 @@ Checkpoint gate:
 - [x] T-007 Parser、機場詞典與狀態正規化
 - [x] T-008 Flight Persistence 與變更歷史
 - [x] T-009 Status Engine
-- [ ] T-010 Flight Sync Use Case 與 Worker
+- [x] T-010 Flight Sync Use Case 與 Worker
 
 Checkpoint gate:
 
-- [ ] Acceptance A01–A12 and B01–B12 pass
-- [ ] Two fixture syncs prove CANCEL_PENDING → CANCELLED
-- [ ] Replaying identical data creates no duplicate instance/snapshot
-- [ ] Tag `cp-02-flight-engine`
+- [x] Acceptance A01–A12 and B01–B12 pass
+- [x] Two fixture syncs prove CANCEL_PENDING → CANCELLED
+- [x] Replaying identical data creates no duplicate instance/snapshot
+- [x] Tag `cp-02-flight-engine`
+
+## First Release Fast Track
+
+> The original T-001–T-032 backlog remains authoritative. Fast Track entries
+> track only the slices that block `first-release-v0.1.0`; an original Task is
+> complete only after all of its detailed acceptance criteria pass.
+
+- [x] FR-01 Truthful statistics — T-011 through T-013
+- [ ] FR-02 Public product — T-020 through T-022 and public T-026 acceptance
+- [-] FR-03 Minimum operations — launch-critical T-023, T-024, T-027 and T-028
+  - [x] T-023/T-024 launch slice — protected flight views, manual sync and confirmed statistics recalculation
+  - [!] T-027/T-028 launch slice — implementation verified; real PostgreSQL restore drill awaits client tooling
+- [-] FR-04 Deploy and release — T-031 and launch-critical T-032 smoke gate
+  - [!] T-031 Docker packaging — configuration verified; image build/rehearsal awaits Docker host
+  - [ ] T-032 production smoke gate
+
+First-release gate:
+
+- [x] Statistics, quality and settlement checkpoint passes
+- [ ] Public dashboard, flight details, history and cancellations are usable
+- [ ] Minimum Admin operations, restart recovery and backup/restore pass
+- [ ] Docker deployment and production smoke pass
+- [ ] Tag `first-release-v0.1.0`
 
 ## CP-03 — Statistics
 
-- [ ] T-011 Statistics Engine
-- [ ] T-012 Data Quality 與 Monitoring Gap
-- [ ] T-013 Daily Settlement 與重算
+- [x] T-011 Statistics Engine
+- [x] T-012 Data Quality 與 Monitoring Gap
+- [x] T-013 Daily Settlement 與重算
 
 Checkpoint gate:
 
-- [ ] Fixed dataset matches manual calculations
-- [ ] Acceptance C01–C12 passes
-- [ ] Fake-clock boundaries at 23:30, 00:05 and 06:00 pass
+- [x] Fixed dataset matches manual calculations
+- [x] Acceptance C01–C12 passes
+- [x] Fake-clock boundaries at 23:30, 00:05 and 06:00 pass
 - [ ] Tag `cp-03-statistics`
 
 ## CP-04 — SNS Pipeline
@@ -65,9 +88,9 @@ Checkpoint gate:
 
 ## CP-05 — Public Site & Admin
 
-- [ ] T-020 Read API 與查詢層
-- [ ] T-021 公開首頁
-- [ ] T-022 航班詳情、歷史與取消頁
+- [x] T-020 Read API 與查詢層
+- [x] T-021 公開首頁
+- [x] T-022 航班詳情、歷史與取消頁
 - [ ] T-023 Admin Dashboard 與 Flights
 - [ ] T-024 Admin Statistics 與 Scraper
 - [ ] T-025 Admin Social、Templates 與 Settings

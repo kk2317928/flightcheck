@@ -37,6 +37,7 @@ export class MacauAirportFlightSource implements FlightSourceAdapter {
         status: 'FAILED',
         flights: [],
         warnings: [],
+        rowCount: 0,
         fetchedAt: this.now(),
         sourceUpdatedAt: null,
         error: {
@@ -55,6 +56,10 @@ export class MacauAirportFlightSource implements FlightSourceAdapter {
       .flatMap(({ result }) => result.flights)
       .filter(({ serviceDate }) => serviceDate === request.serviceDate);
     const warnings = parsed.flatMap(({ result }) => result.warnings);
+    const rowCount = parsed.reduce(
+      (sum, { result }) => sum + result.rowCount,
+      0,
+    );
 
     for (const { direction, result } of parsed) {
       if (!result.serviceDates.includes(request.serviceDate)) {
@@ -89,6 +94,7 @@ export class MacauAirportFlightSource implements FlightSourceAdapter {
           : 'COMPLETE',
       flights,
       warnings,
+      rowCount,
       fetchedAt:
         latestDate(boardResult.documents, ({ fetchedAt }) => fetchedAt) ??
         this.now(),

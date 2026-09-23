@@ -50,6 +50,9 @@ importers:
       '@flightcheck/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@flightcheck/worker':
+        specifier: workspace:*
+        version: link:../worker
       '@tailwindcss/postcss':
         specifier: ^4.1.13
         version: 4.3.3
@@ -99,10 +102,25 @@ importers:
 
   apps/worker:
     dependencies:
+      '@flightcheck/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@flightcheck/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@flightcheck/flight-source':
+        specifier: workspace:*
+        version: link:../../packages/flight-source
       '@flightcheck/shared':
         specifier: workspace:*
         version: link:../../packages/shared
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.4.3
+        version: 0.4.3
+      '@electric-sql/pglite-socket':
+        specifier: ^0.1.3
+        version: 0.1.3(@electric-sql/pglite@0.4.3)
       '@types/node':
         specifier: ^24.3.1
         version: 24.13.6

@@ -17,7 +17,7 @@
     "db:migrate:reset": "prisma generate && prisma migrate reset --force && prisma db seed",
     "db:seed": "prisma generate && prisma db seed",
     "lint": "prisma generate && eslint .",
-    "test": "prisma generate && vitest run",
+    "test": "prisma generate && vitest run --maxWorkers=3",
     "typecheck": "prisma generate && tsc --noEmit"
   },
   "dependencies": {

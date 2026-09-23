@@ -30,6 +30,7 @@ describe('flight source contracts', () => {
       warnings: [],
       fetchedAt,
       sourceUpdatedAt: new Date('2026-09-22T02:04:00.000Z'),
+      rowCount: 1,
     });
 
     expect(result.flights[0]?.flightNumber).toBe('NX862D');
@@ -49,6 +50,7 @@ describe('flight source contracts', () => {
       ],
       fetchedAt,
       sourceUpdatedAt: null,
+      rowCount: 1,
     });
 
     expect(result.status).toBe('PARTIAL');
@@ -62,6 +64,7 @@ describe('flight source contracts', () => {
       warnings: [],
       fetchedAt,
       sourceUpdatedAt: null,
+      rowCount: 0,
       error: {
         code: 'TIMEOUT',
         message: 'Airport source timed out.',
@@ -83,6 +86,7 @@ describe('flight source contracts', () => {
       warnings: [],
       fetchedAt,
       sourceUpdatedAt: null,
+      rowCount: 0,
       error: {
         code: 'MALFORMED_RESPONSE',
         message: 'Airport response did not contain a flight board.',
@@ -103,6 +107,7 @@ describe('flight source contracts', () => {
       warnings: [],
       fetchedAt: 'not-a-date',
       sourceUpdatedAt: null,
+      rowCount: 1,
     });
 
     expect(malformed.success).toBe(false);
@@ -133,6 +138,7 @@ describe('flight source contracts', () => {
       warnings: [],
       fetchedAt,
       sourceUpdatedAt: null,
+      rowCount: 1,
     };
     const adapter: FlightSourceAdapter = {
       fetchFlights: () => Promise.resolve(expected),
