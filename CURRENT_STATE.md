@@ -61,7 +61,8 @@ The repository began with documentation only. It now contains:
 | T-010 Flight sync Worker            | Complete                       | Global lease, directional runs, stale re-evaluation, CLI and five-minute scheduler     |
 | T-011 Statistics engine             | Complete                       | Pure full-dataset aggregation, truthful denominators and null zero-denominator rates   |
 | T-012 Data quality                  | Complete                       | Direction coverage, freshness and critical-warning reasons with conservative watermark |
-| T-013 Daily settlement              | Complete                       | Atomic upsert, FINAL protection, quality-aware settlement and Macau-time scheduler      |
+| T-013 Daily settlement              | Complete                       | Atomic upsert, FINAL protection, quality-aware settlement and Macau-time scheduler     |
+| T-020 Public read queries           | Complete                       | Validated filters, stable pagination and public-safe DTOs                              |
 
 ## Active Checkpoint
 
@@ -69,7 +70,11 @@ The repository began with documentation only. It now contains:
 
 ## Active Task
 
-`T-020 — Read API 與查詢層` is next. `T-013 — Daily Settlement 與重算` is
+`T-021/T-022 — Public UI` is next. `T-020 — Read API 與查詢層` is verified.
+It validates dates, flight numbers, directions and bounded pagination; uses
+stable `(scheduledAt, id)` ordering; and exposes public-safe DTOs.
+
+`T-013 — Daily Settlement 與重算` is
 verified. It persists full-day recalculations by service date, protects FINAL
 rows from ordinary scheduled downgrade, and runs at 23:30, 00:05, hourly
 through 05:05, and the 06:00 deadline in Macau time. COMPLETE determined data
@@ -116,11 +121,19 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 ## Verification Baseline
 
 - `pnpm install --frozen-lockfile` passes using pnpm 11.19.0.
-- T-013 targeted verification passes: Domain 62 tests, DB 49 tests, and Worker
-  42 tests.
+- T-020 targeted verification passes: DB 51 tests and Web 29 tests.
 - `TURBO_FORCE=true TZ=Asia/Macau DATABASE_URL=postgresql://flightcheck:flightcheck@127.0.0.1:5432/flightcheck pnpm verify`
-  passes: formatting, all 6 package lint/typecheck/build tasks, and 230 tests
-  (Shared 15, Flight Source 35, Domain 62, DB 49, Worker 42, Web 27).
+  passes: formatting, all 6 package lint/typecheck/build tasks, and 234 tests
+  (Shared 15, Flight Source 35, Domain 62, DB 51, Worker 42, Web 29).
+
+### T-020 — Read API 與查詢層
+
+- Commit: `feat(api): add flight and statistics queries`
+- Verification: DB 51 and Web 29 tests; forced verification passed 234 tests
+  and all 6 package lint/typecheck/build tasks.
+- Decisions: public DTO allow-list; page size capped at 100; stable ordering;
+  cancellations filtered before pagination; exact service-date keys.
+- Follow-up: implement T-021/T-022 public UI.
 
 ### T-013 — Daily Settlement 與重算
 
@@ -181,9 +194,8 @@ T-009 added the Prisma-free `@flightcheck/domain` package. Performance classific
 
 ## Next Exact Action
 
-Create annotated tag `cp-03-statistics` at the T-013 commit, then implement
-`T-020 — Read API 與查詢層` using the approved Fast Track plan.
+Implement `T-021/T-022 — Public UI` using the approved Fast Track plan.
 
 ```text
-feat(statistics): add daily settlement workflow
+feat(api): add flight and statistics queries
 ```

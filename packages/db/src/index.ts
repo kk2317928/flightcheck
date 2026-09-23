@@ -35,6 +35,11 @@ export type {
   JobLockRepository,
 } from './job-lock-repository.js';
 export { seedDatabase } from './seed.js';
+export { createFlightQueryRepository } from './flight-query-repository.js';
+export type {
+  FlightQueryRepository,
+  PublicFlightRecord,
+} from './flight-query-repository.js';
 export { createStatisticsRepository } from './statistics-repository.js';
 export type {
   LoadStatisticsSourceInput,
